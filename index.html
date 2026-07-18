@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RecruitTrack - Recruitment Management Portal</title>
+  <!-- Third-party Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app" id="app">
+  <div class="sidebar" id="sidebar" style="display:none">
+    <div class="sidebar-brand">
+      <div class="logo"><i class="ti ti-users" aria-hidden="true"></i> RecruitTrack</div>
+      <div class="sub">Recruitment Portal</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Main</div>
+      <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard"><i class="ti ti-layout-dashboard" aria-hidden="true"></i> Dashboard</div>
+      <div class="nav-item" onclick="showPage('add')" id="nav-add"><i class="ti ti-user-plus" aria-hidden="true"></i> Add Recruit</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Admin</div>
+      <div class="nav-item" onclick="showPage('users')" id="nav-users"><i class="ti ti-users" aria-hidden="true"></i> Manage Users</div>
+      <div class="nav-item" onclick="showPage('jobs')" id="nav-jobs"><i class="ti ti-briefcase" aria-hidden="true"></i> Manage Positions</div>
+      <div class="nav-item" onclick="showPage('sources')" id="nav-sources"><i class="ti ti-antenna" aria-hidden="true"></i> Manage Sources</div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="nav-item" style="border-top:0.5px solid rgba(255,255,255,0.1)" onclick="logout()"><i class="ti ti-logout" aria-hidden="true"></i> Sign Out</div>
+  </div>
+
+  <div class="main">
+    <div id="page-login" class="login-wrap">
+      <div class="login-card">
+        <div class="login-logo">
+          <div style="width:44px;height:44px;background:var(--rt-navy);border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px">
+            <i class="ti ti-users" style="color:#fff;font-size:20px" aria-hidden="true"></i>
+          </div>
+          <div class="name">RecruitTrack</div>
+          <div class="tag">Recruitment Management Portal</div>
+        </div>
+        <button class="btn-entra" onclick="entralogin()">
+          <svg width="16" height="16" viewBox="0 0 21 21" fill="none"><path d="M10 0H0v10h10V0z" fill="#F25022"/><path d="M21 0H11v10h10V0z" fill="#7FBA00"/><path d="M10 11H0v10h10V11z" fill="#00A4EF"/><path d="M21 11H11v10h10V11z" fill="#FFB900"/></svg>
+          Sign in with Microsoft Entra ID
+        </button>
+        <div class="divider">or use email</div>
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="recruiter@company.com" value="sarah.jones@recruitco.co.za" />
+        <label>Password</label>
+        <input type="password" id="login-pass" placeholder="••••••••" value="password" />
+        <button class="btn-primary" onclick="doLogin()">Sign In</button>
+        <p id="login-err" style="color:var(--rt-red);font-size:12px;margin-top:8px;display:none;font-weight:600">Invalid credentials. Try again.</p>
+      </div>
+    </div>
+
+    <div class="topbar" id="topbar" style="display:none">
+      <div style="display: flex; align-items: center; gap: 14px; flex: 1;">
+        <div class="topbar-title" id="page-title">Dashboard</div>
+        
+        <div id="search-container" style="display: none; align-items: center; gap: 10px;">
+          <div style="position: relative; width: 220px;">
+            <i class="ti ti-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #888; font-size: 14px;"></i>
+            <input type="text" id="recruit-search" placeholder="Search position or name..." oninput="filterRecruitsBySearch()" style="width: 100%; padding: 6px 10px 6px 32px; font-size: 12px; border: 1px solid #ccc; border-radius: 6px; outline: none;">
+          </div>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <span style="font-size: 11px; color: #666; font-weight: 500;">Min R:</span>
+            <input type="number" id="filter-min-rate" placeholder="0" oninput="filterRecruitsBySearch()" style="width: 85px; padding: 6px 8px; font-size: 12px; border: 1px solid #ccc; border-radius: 6px; outline: none;">
+          </div>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <span style="font-size: 11px; color: #666; font-weight: 500;">Max R:</span>
+            <input type="number" id="filter-max-rate" placeholder="Max" oninput="filterRecruitsBySearch()" style="width: 85px; padding: 6px 8px; font-size: 12px; border: 1px solid #ccc; border-radius: 6px; outline: none;">
+          </div>
+        </div>
+      </div>
+      <div class="topbar-user">
+        <div class="avatar" id="user-avatar">SJ</div>
+        <span id="user-name">Sarah Jones</span>
+      </div>
+    </div>
+
+    <div class="content" id="page-dashboard" style="display:none">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">Total Recruits</div><div class="stat-val" id="stat-total">0</div></div>
+        <div class="stat-card"><div class="stat-label">This Month</div><div class="stat-val" id="stat-month">0</div></div>
+        <div class="stat-card"><div class="stat-label">Placed</div><div class="stat-val" id="stat-placed">0</div></div>
+        <div class="stat-card"><div class="stat-label">In Progress</div><div class="stat-val" id="stat-progress">0</div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:500;color:var(--rt-navy)">Recent Recruits Log</div>
+        <button class="add-btn" onclick="showPage('add')"><i class="ti ti-plus" aria-hidden="true"></i> Add Recruit</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:120px">Name</th>
+              <th style="width:110px">Position</th>
+              <th style="width:80px">Source</th>
+              <th style="width:85px">Date</th>
+              <th style="width:80px">Rate (R)</th>
+              <th style="width:75px">Outcome</th>
+            </tr>
+          </thead>
+          <tbody id="recruit-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ADD RECRUIT PAGE -->
+    <div class="content" id="page-add" style="display:none">
+      <div id="form-success" class="success-banner" style="display:none"><i class="ti ti-circle-check" aria-hidden="true"></i> Recruit added safely to tracking dashboard logs!</div>
+      <div id="form-err" class="err-banner" style="display:none"></div>
+      <div class="section-head">New Recruit Details</div>
+      <div class="form-grid">
+        
+        <div class="form-group">
+          <label>Recruiter <span class="req">*</span></label>
+          <select id="f-recruiter"><option value="">— select recruiter —</option></select>
+          <span class="field-err" id="e-recruiter"></span>
+        </div>
+        
+        <div class="form-group">
+          <label>Date Sourced <span class="req">*</span></label>
+          <input type="text" id="f-date" placeholder="yyyyMMdd e.g. 20260525" maxlength="8" oninput="fmtDate(this)" />
+          <span class="field-err" id="e-date"></span>
+        </div>
+        
+        <div class="form-group">
+          <label>First Name <span class="req">*</span></label>
+          <input type="text" id="f-fname" placeholder="First name" />
+          <span class="field-err" id="e-fname"></span>
+        </div>
+        
+        <div class="form-group">
+          <label>Surname <span class="req">*</span></label>
+          <input type="text" id="f-lname" placeholder="Surname" />
+          <span class="field-err" id="e-lname"></span>
+        </div>
+        
+        <div class="form-group">
+          <label>Source <span class="req">*</span></label>
+          <select id="f-source"><option value="">— select source —</option></select>
+          <span class="field-err" id="e-source"></span>
+        </div>
+        
+        <div class="form-group">
+          <label>Notice Period <span class="req">*</span></label>
+          <select id="f-notice">
+            <option value="">— select —</option>
+            <option value="1">Immediate</option>
+            <option value="2">1 Week</option>
+            <option value="3">2 Weeks</option>
+            <option value="4">1 Month</option>
+            <option value="5">2 Months</option>
+            <option value="6">3 Months</option>
+            <option value="7">6 Months</option>
+          </select>
+          <span class="field-err" id="e-notice"></span>
+        </div>
+
+        <div class="form-group">
+          <label>Current Rate (ZAR/hr or monthly)</label>
+          <input type="number" id="f-current-rate" placeholder="e.g. 40000" min="0" />
+          <span class="field-err" id="e-current-rate"></span>
+        </div>
+        
+        <div class="form-group">
+          <label>Expected Rate (ZAR) <span class="req">*</span></label>
+          <input type="number" id="f-rate" placeholder="e.g. 45000" min="0" />
+          <span class="field-err" id="e-rate"></span>
+        </div>
+
+        <div class="form-group">
+          <label>Years of Experience</label>
+          <input type="number" id="f-experience" placeholder="e.g. 4.5" min="0" step="0.1" />
+          <span class="field-err" id="e-experience"></span>
+        </div>
+
+        <div class="form-group">
+          <label>Nationality</label>
+          <input type="text" id="f-nationality" placeholder="e.g. South African" />
+          <span class="field-err" id="e-nationality"></span>
+        </div>
+
+        <div class="form-group">
+          <label>Current Location</label>
+          <input type="text" id="f-location" placeholder="e.g. Johannesburg, GP" />
+          <span class="field-err" id="e-location"></span>
+        </div>
+        
+        <div class="form-group">
+          <label>Country of Residency <span class="req">*</span></label>
+          <select id="f-country" onchange="syncPhoneCode()">
+            <option value="">— select country —</option>
+            <option value="1" data-code="+27">South Africa (+27)</option>
+            <option value="2" data-code="+263">Zimbabwe (+263)</option>
+            <option value="3" data-code="+260">Zambia (+260)</option>
+            <option value="4" data-code="+44">United Kingdom (+44)</option>
+            <option value="5" data-code="+1">United States (+1)</option>
+          </select>
+          <span class="field-err" id="e-country"></span>
+        </div>
+        
+        <div class="form-group">
+          <label>Contact Number <span class="req">*</span> <span style="font-size:10px;color:#777">(9 digits)</span></label>
+          <div class="phone-row">
+            <input type="text" id="f-phonecode" placeholder="+27" style="width:70px" readonly />
+            <input type="text" id="f-phonenum" placeholder="123456789" maxlength="9" oninput="this.value=this.value.replace(/\D/g,'')" />
+          </div>
+          <span class="field-err" id="e-phone"></span>
+        </div>
+
+        <div class="form-group">
+          <label>Alternate Number <span style="font-size:10px;color:#777">(Optional)</span></label>
+          <div class="phone-row">
+            <input type="text" id="f-alt-phonecode" placeholder="+27" style="width:70px" />
+            <input type="text" id="f-alt-phonenum" placeholder="9 digit secondary" maxlength="9" oninput="this.value=this.value.replace(/\D/g,'')" />
+          </div>
+          <span class="field-err" id="e-alt-phone"></span>
+        </div>
+        
+        <div class="form-group">
+          <label>Email Address <span class="req">*</span></label>
+          <input type="email" id="f-email" placeholder="candidate@email.com" />
+          <span class="field-err" id="e-email"></span>
+        </div>
+        
+        <div class="form-group">
+          <label>Recruit Position <span class="req">*</span></label>
+          <select id="f-job"><option value="">— select position —</option></select>
+          <span class="field-err" id="e-job"></span>
+        </div>
+        
+        <div class="form-group">
+          <label>Outcome</label>
+          <select id="f-outcome">
+            <option value="">— select outcome —</option>
+            <option value="1">In Progress</option>
+            <option value="2">Placed</option>
+            <option value="3">Declined Offer</option>
+            <option value="4">Not Suitable</option>
+            <option value="5">On Hold</option>
+            <option value="6">Interviewing</option>
+            <option value="7">Offerred</option>
+          </select>
+        </div>
+
+        <div class="form-group full">
+          <label for="f-cv">Supporting Documents (Max 5)</label>
+          <input type="file" id="f-cv" name="f-cv" multiple accept=".pdf,.doc,.docx">
+          <span class="field-err" id="e-cv"></span>
+        </div>
+        
+        <div class="form-group full">
+          <label>Comments <span style="font-size:10px;color:#777">(max 200 characters)</span></label>
+          <textarea id="f-comments" placeholder="Additional notes about the recruit..." maxlength="200" oninput="updateCharCount()"></textarea>
+          <div class="char-count"><span id="char-count">0</span>/200</div>
+          <span class="field-err" id="e-comments"></span>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-sec" onclick="clearForm()">Clear</button>
+        <button class="add-btn" onclick="submitForm()"><i class="ti ti-device-floppy" aria-hidden="true"></i> Save Recruit</button>
+      </div>
+    </div>
+
+    <div class="content" id="page-jobs" style="display:none">
+      <div class="section-head">Manage Positions</div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <input type="text" id="new-job" placeholder="New position title e.g. Senior React Developer" style="flex:1;font-size:13px" />
+        <button class="add-btn" onclick="addItem('job')"><i class="ti ti-plus" aria-hidden="true"></i> Add</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Position Title</th><th style="width:80px">Status</th></tr></thead>
+          <tbody id="jobs-list"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="content" id="page-sources" style="display:none">
+      <div class="section-head">Manage Sources</div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <input type="text" id="new-source" placeholder="New source e.g. Headhunter" style="flex:1;font-size:13px" />
+        <button class="add-btn" onclick="addItem('source')"><i class="ti ti-plus" aria-hidden="true"></i> Add</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Source Name</th><th style="width:80px">Status</th></tr></thead>
+          <tbody id="sources-list"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="content" id="page-users" style="display:none">
+      <div class="section-head">Manage Users</div>
+      <div style="background:#f8f9fa; border:1px solid #e1e4e8; border-radius:6px; padding:16px; margin-bottom:16px">
+        <div style="font-size:12px; font-weight:600; color:var(--rt-navy); margin-bottom:10px">Add System User / Recruiter</div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <input type="text" id="new-user-name" placeholder="Full Name" style="flex: 1; padding:8px; font-size:13px; border:1px solid #ccc; border-radius:6px">
+          <input type="email" id="new-user-email" placeholder="Email Address" style="flex: 1; padding:8px; font-size:13px; border:1px solid #ccc; border-radius:6px">
+          <input type="password" id="new-user-password" placeholder="Initial Password" style="flex: 1; padding:8px; font-size:13px; border:1px solid #ccc; border-radius:6px">
+          <button class="add-btn" onclick="addUser()">Add User</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email Address</th>
+              <th style="width:100px">Initials</th>
+            </tr>
+          </thead>
+          <tbody id="users-list"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Core Business Logic Application Flow Script -->
+<script src="script.js"></script>
+</body>
+</html>

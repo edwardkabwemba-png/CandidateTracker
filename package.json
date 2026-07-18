@@ -1,0 +1,11 @@
+{
+  "name": "recruittrack-portal",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "mkdir -p dist && cp index.html dist/",
+    "build:azure": "mkdir -p dist && cp index.html dist/"
+  },
+  "dependencies": {
+    "@azure/storage-blob": "^12.26.0"
+  }
+}
