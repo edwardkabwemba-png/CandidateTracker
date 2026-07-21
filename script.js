@@ -258,5 +258,42 @@ async function addItem(type) {
   }
 }
 
+function submitForm() {
+  // Collect values directly matching string values and type requirements
+  const payload = {
+    date: document.getElementById('f-date').value, // Standardize to YYYY-MM-DD prior to submit
+    recruiter: document.getElementById('f-recruiter').value,
+    name: document.getElementById('f-fname').value,
+    surname: document.getElementById('f-lname').value,
+    role: document.getElementById('f-job').value,
+    mainCountryCode: document.getElementById('f-phonecode').value,
+    mainBaseNumber: document.getElementById('f-phonenum').value,
+    altCountryCode: document.getElementById('f-alt-phonecode').value,
+    altBaseNumber: document.getElementById('f-alt-phonenum').value,
+    email: document.getElementById('f-email').value,
+    noticePeriod: document.getElementById('f-notice').value, // Returns String e.g. "1 Month"
+    currentLocation: document.getElementById('f-location').value,
+    nationality: document.getElementById('f-nationality').value,
+    currentRate: document.getElementById('f-current-rate').value, // Float
+    expectedRate: document.getElementById('f-rate').value         // Int
+  };
+
+  fetch('/api/addCandidate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      document.getElementById('form-success').style.display = 'block';
+      clearForm();
+    } else {
+      document.getElementById('form-err').innerText = data.error;
+      document.getElementById('form-err').style.display = 'block';
+    }
+  });
+}
+
 // Note: Ensure functions missing from original clip snippet like syncPhoneCode(), 
 // fmtDate(), updateCharCount(), clearForm(), and submitForm() are appended if needed.
