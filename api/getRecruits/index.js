@@ -33,11 +33,11 @@ module.exports = async function (context, req) {
                 SELECT 
                     c.RecruitID,
                     (c.Name + ' ' + c.Surname) AS FullName,
-                    c.Role AS PostionTitle,
+                    c.Role AS PositionTitle,
                     c.Source AS SourceName,
                     c.Date as DateSourced,
                     c.Expected_Rate as ExpectedRate,
-                    c.Outcome
+                    c.Outcome as OutcomeName
                 FROM [dbo].[Candidates_data] c
                 ORDER BY c.Date DESC
             `;
