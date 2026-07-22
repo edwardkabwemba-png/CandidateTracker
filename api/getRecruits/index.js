@@ -22,7 +22,7 @@ module.exports = async function (context, req) {
 
         connection.on('connect', (err) => {
             if (err) {
-                context.log("Database connection failure in GetRecruits:", err);
+                context.log("Database connection failure in getRecruits:", err);
                 context.res = { status: 500, body: "Database configuration layout error." };
                 resolve();
                 return;
@@ -31,15 +31,18 @@ module.exports = async function (context, req) {
             // JOINs pull string names instead of raw foreign IDs
             const query = `
                 SELECT 
-                    c.RecruitID,
-                    (c.Name + ' ' + c.Surname) AS FullName,
-                    c.Role AS PositionTitle,
-                    c.Source AS SourceName,
-                    c.Date as DateSourced,
-                    c.Expected_Rate as ExpectedRate,
-                    c.Outcome as OutcomeName
-                FROM [dbo].[Candidates_data] c
-                ORDER BY c.Date DESC
+                    r.RecruitID,
+                    (r.FirstName + ' ' + r.Surname) AS FullName,
+                    p.PositionTitle,
+                    s.SourceName,
+                    r.DateSourced,
+                    r.ExpectedRate,
+                    o.OutcomeName
+                FROM [dbo].[Recruits] r
+                LEFT JOIN [dbo].[Positions] p ON r.PositionID = p.PositionID
+                LEFT JOIN [dbo].[Sources] s ON r.SourceID = s.SourceID
+                LEFT JOIN [dbo].[Outcomes] o ON r.OutcomeID = o.OutcomeID
+                ORDER BY r.DateSourced DESC
             `;
 
             const request = new Request(query, (requestErr) => {

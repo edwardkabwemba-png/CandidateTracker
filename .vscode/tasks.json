@@ -9,7 +9,9 @@
             "type": "shell",
             "args": [
                 "build",
+                // Ask dotnet build to generate full paths for file names.
                 "/property:GenerateFullPaths=true",
+                // Do not generate summary otherwise it leads to duplicate errors in Problems panel
                 "/consoleloggerparameters:NoSummary"
             ],
             "group": "build",
@@ -17,25 +19,6 @@
                 "reveal": "silent"
             },
             "problemMatcher": "$msCompile"
-        },
-        {
-            "type": "func",
-            "label": "func: host start",
-            "command": "host start",
-            "problemMatcher": "$func-node-watch",
-            "isBackground": true,
-            "dependsOn": "npm install (functions)"
-        },
-        {
-            "type": "shell",
-            "label": "npm install (functions)",
-            "command": "npm install"
-        },
-        {
-            "type": "shell",
-            "label": "npm prune (functions)",
-            "command": "npm prune --production",
-            "problemMatcher": []
         }
     ]
 }

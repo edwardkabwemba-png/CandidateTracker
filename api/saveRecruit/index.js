@@ -20,35 +20,30 @@ const config = {
 module.exports = async function (context, req) {
     try {
         // 1. Fail immediately if required data fields are completely missing from the frontend request
-        if (!req.body || !req.body.name || !req.body.surname || !req.body.email) {
+        if (!req.body || !req.body.firstName || !req.body.surname || !req.body.email) {
             context.res = {
                 status: 400,
-                body: "Missing required profile fields (Name, Surname, or Email)."
+                body: "Missing required profile fields (First Name, Surname, or Email)."
             };
             return;
         }
 
-        // 2. Unpack keys matching your new schema format from the frontend request
+        // 2. Unpack keys passed directly by your index.html submitForm() logic
         const {
-            date,
-            recruiter,
-            name,
+            recruiterId,
+            dateSourced,
+            firstName,
             surname,
-            role,
-            mainCountryCode,
-            mainBaseNumber,
-            alternateCountryCode,
-            alternateBaseNumber,
-            email,
-            noticePeriod,
-            currentLocation,
-            nationality,
-            currentRate,
+            sourceId,
+            noticePeriodId,
             expectedRate,
-            source,
-            yearsOfExperience,
+            countryId,
+            phone, 
+            email, 
+            positionId,
+            outcomeId,
             comments,
-            files // Multi-file array from frontend
+            files // This is the new multi-file array from the frontend
         } = req.body;
 
         let uploadedUrls = [];
@@ -65,13 +60,16 @@ module.exports = async function (context, req) {
                 const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
                 const containerClient = blobServiceClient.getContainerClient('cv-uploads');
                 
+                // Create container as private by default if it doesn't exist
                 await containerClient.createIfNotExists();
 
-                // Virtual folder path name structure: "Name_Surname"
-                const folderName = `${name.trim()}_${surname.trim()}`;
+                // Virtual folder path name structure: "FirstName_Surname"
+                const folderName = `${firstName.trim()}_${surname.trim()}`;
 
+                // Loop through and process each file payload safely
                 for (const file of files) {
                     if (file.base64) {
+                        // Strip base64 data URL prefix if it accidentally leaked through from FileReader
                         const cleanBase64 = file.base64.includes(',') ? file.base64.split(',')[1] : file.base64;
                         const fileBuffer = Buffer.from(cleanBase64, 'base64');
                         
@@ -92,6 +90,7 @@ module.exports = async function (context, req) {
             return;
         }
 
+        // Combine all successfully uploaded document links together separated by a comma
         const finalUrlString = uploadedUrls.join(', ');
 
         // 4. --- SQL SERVER DATABASE TRANSACTION ---
@@ -106,20 +105,15 @@ module.exports = async function (context, req) {
                     return;
                 }
 
-                // Query updated to match your exact new database column format
                 const query = `
                     INSERT INTO [dbo].[Recruits] (
-                        [Date], [Recruiter], [Name], [Surname], [Role], 
-                        [MainCountryCode], [MainBaseNumber], [AlternateCountryCode], [AlternateBaseNumber], 
-                        [Email], [NoticePeriod], [CurrentLocation], [Nationality], 
-                        [CurrentRate], [ExpectedRate], [Source], [YearsOfExperience], 
-                        [Comments], [cvUrl], [CreatedAt]
+                        RecruiterID, DateSourced, FirstName, Surname, SourceID, 
+                        NoticePeriodID, ExpectedRate, CountryID, PhoneCode, PhoneNumber, 
+                        EmailAddress, PositionID, OutcomeID, Comments, cvUrl, CreatedAt
                     ) VALUES (
-                        @Date, @Recruiter, @Name, @Surname, @Role, 
-                        @MainCountryCode, @MainBaseNumber, @AlternateCountryCode, @AlternateBaseNumber, 
-                        @Email, @NoticePeriod, @CurrentLocation, @Nationality, 
-                        @CurrentRate, @ExpectedRate, @Source, @YearsOfExperience, 
-                        @Comments, @cvUrl, GETDATE()
+                        @RecruiterID, @DateSourced, @FirstName, @Surname, @SourceID, 
+                        @NoticePeriodID, @ExpectedRate, @CountryID, @PhoneCode, @PhoneNumber, 
+                        @EmailAddress, @PositionID, @OutcomeID, @Comments, @cvUrl, GETDATE()
                     )
                 `;
 
@@ -131,7 +125,7 @@ module.exports = async function (context, req) {
                             body: `SQL Write Failure: ${requestErr.message}`
                         };
                     } else {
-                        context.log("Database row successfully written with new schema layout.");
+                        context.log("Database row successfully written with multiple document link chains.");
                         context.res = {
                             status: 200,
                             headers: { 'Content-Type': 'application/json' },
@@ -142,26 +136,26 @@ module.exports = async function (context, req) {
                     resolve();
                 });
 
-                // Parameter binding matching types accurately down to the database layout
-                request.addParameter('Date', TYPES.Date, date ? new Date(date) : new Date());
-                request.addParameter('Recruiter', TYPES.NVarChar, recruiter || null);
-                request.addParameter('Name', TYPES.NVarChar, name);
+                // Parse phone layouts safely
+                const derivedPhoneCode = phone ? phone.slice(0, 3) : '';
+                const derivedPhoneNum = phone ? phone.slice(3) : '';
+
+                // Parameter parameter logic bindings mapping exactly down to column schema structure
+                request.addParameter('RecruiterID', TYPES.Int, parseInt(recruiterId) || 1);
+                request.addParameter('DateSourced', TYPES.VarChar, dateSourced || '');
+                request.addParameter('FirstName', TYPES.NVarChar, firstName);
                 request.addParameter('Surname', TYPES.NVarChar, surname);
-                request.addParameter('Role', TYPES.NVarChar, role || null);
-                request.addParameter('MainCountryCode', TYPES.NVarChar, mainCountryCode || null);
-                request.addParameter('MainBaseNumber', TYPES.NVarChar, mainBaseNumber || null);
-                request.addParameter('AlternateCountryCode', TYPES.NVarChar, alternateCountryCode || null);
-                request.addParameter('AlternateBaseNumber', TYPES.NVarChar, alternateBaseNumber || null);
-                request.addParameter('Email', TYPES.NVarChar, email);
-                request.addParameter('NoticePeriod', TYPES.NVarChar, noticePeriod || null);
-                request.addParameter('CurrentLocation', TYPES.NVarChar, currentLocation || null);
-                request.addParameter('Nationality', TYPES.NVarChar, nationality || null);
-                request.addParameter('CurrentRate', TYPES.Decimal, currentRate ? parseFloat(currentRate) : null);
-                request.addParameter('ExpectedRate', TYPES.Decimal, expectedRate ? parseFloat(expectedRate) : null);
-                request.addParameter('Source', TYPES.NVarChar, source || null);
-                request.addParameter('YearsOfExperience', TYPES.Decimal, yearsOfExperience ? parseFloat(yearsOfExperience) : null);
+                request.addParameter('SourceID', TYPES.Int, parseInt(sourceId) || 1);
+                request.addParameter('NoticePeriodID', TYPES.Int, parseInt(noticePeriodId) || 1);
+                request.addParameter('ExpectedRate', TYPES.Decimal, parseFloat(expectedRate) || 0.00);
+                request.addParameter('CountryID', TYPES.Int, parseInt(countryId) || 1);
+                request.addParameter('PhoneCode', TYPES.NVarChar, derivedPhoneCode);
+                request.addParameter('PhoneNumber', TYPES.NVarChar, derivedPhoneNum);
+                request.addParameter('EmailAddress', TYPES.NVarChar, email);
+                request.addParameter('PositionID', TYPES.Int, parseInt(positionId) || 1);
+                request.addParameter('OutcomeID', TYPES.Int, outcomeId ? parseInt(outcomeId) : 1);
                 request.addParameter('Comments', TYPES.NVarChar, comments || null);
-                request.addParameter('cvUrl', TYPES.NVarChar, finalUrlString); 
+                request.addParameter('cvUrl', TYPES.NVarChar, finalUrlString); // Commits the multi-link comma list here
 
                 connection.execSql(request);
             });
