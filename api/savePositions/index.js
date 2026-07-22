@@ -70,8 +70,15 @@ module.exports = async function (context, req) {
                 return; 
             }
 
-            const query = `INSERT INTO [dbo].[Positions] (PositionTitle, CreatedAt) VALUES (@Title, GETDATE())`;
+            // Using OUTPUT INSERTED to retrieve the generated identity ID
+            const query = `
+                INSERT INTO [dbo].[Positions] (PositionTitle) 
+                OUTPUT INSERTED.PositionID 
+                VALUES (@Title)
+            `;
             
+            let insertedId = null;
+
             const request = new Request(query, (requestErr) => {
                 if (requestErr) {
                     context.log("SQL Write error in savePositions:", requestErr);
@@ -80,11 +87,18 @@ module.exports = async function (context, req) {
                     context.res = { 
                         status: 200, 
                         headers: { 'Content-Type': 'application/json' }, 
-                        body: { success: true } 
+                        body: { success: true, id: insertedId, title: body.title } 
                     };
                 }
                 connection.close(); 
                 resolve();
+            });
+
+            // Capture the generated ID output from the INSERT query
+            request.on('row', (columns) => {
+                if (columns.length > 0) {
+                    insertedId = columns[0].value;
+                }
             });
 
             request.addParameter('Title', TYPES.NVarChar, body.title);
