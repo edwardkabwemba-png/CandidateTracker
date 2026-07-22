@@ -1,22 +1,53 @@
 const { Connection, Request } = require('tedious');
 
-const config = {
-    server: process.env.DB_SERVER,
-    authentication: { 
-        type: 'default', 
-        options: { 
-            userName: process.env.DB_USER, 
-            password: process.env.DB_PASSWORD 
-        } 
-    },
-    options: { 
-        database: process.env.DB_NAME, 
-        encrypt: true, 
-        trustServerCertificate: false 
-    }
-};
+// Helper to parse the ADO.NET connection string into Tedious configuration
+function parseConnectionString(connectionString) {
+    const config = { options: { encrypt: true, trustServerCertificate: false, connectTimeout: 15000 } };
+    if (!connectionString) return config;
+
+    const parts = connectionString.split(';').reduce((acc, current) => {
+        const [key, ...value] = current.split('=');
+        if (key && value.length) {
+            acc[key.trim().toLowerCase()] = value.join('=').trim();
+        }
+        return acc;
+    }, {});
+
+    // Extract Server/Data Source (cleans 'tcp:' prefix and port numbers)
+    const rawServer = parts['server'] || parts['data source'] || '';
+    config.server = rawServer.replace(/^tcp:/i, '').split(',')[0];
+
+    // Extract Auth Credentials
+    config.authentication = {
+        type: 'default',
+        options: {
+            userName: parts['user id'] || parts['uid'] || '',
+            password: parts['password'] || parts['pwd'] || ''
+        }
+    };
+
+    // Extract Database / Catalog name
+    config.options.database = parts['initial catalog'] || parts['database'] || '';
+
+    return config;
+}
 
 module.exports = async function (context, req) {
+    const connectionString = process.env.SqlConnectionString;
+
+    // Guard check to make sure environment variable exists
+    if (!connectionString) {
+        context.log("Missing SqlConnectionString environment variable!");
+        context.res = {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ error: "Server configuration missing database connection string." })
+        };
+        return;
+    }
+
+    const config = parseConnectionString(connectionString);
+
     return new Promise((resolve) => {
         const connection = new Connection(config);
 
@@ -31,7 +62,6 @@ module.exports = async function (context, req) {
                 return;
             }
 
-            // Clean query pulling straight from your Positions database columns
             const query = `
                 SELECT PositionID, PositionTitle 
                 FROM [dbo].[Positions] 
@@ -58,7 +88,6 @@ module.exports = async function (context, req) {
                     item[column.metadata.colName] = column.value;
                 });
                 
-                // Maps property fields to match frontend expectation (id, title)
                 positionsList.push({
                     id: item.PositionID,
                     title: item.PositionTitle || 'Unnamed Position'
