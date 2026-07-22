@@ -197,18 +197,30 @@ async function addUser() {
     alert('Please fill out all user credentials.');
     return;
   }
+
   try {
     const response = await fetch('/api/saveUsers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, password })
     });
-    if(!response.ok) throw new Error('Could not write database rows.');
+
+    // Extract the server response payload
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      // Throw the detailed error returned by the Azure Function
+      throw new Error(data.details || data.message || `Server returned status ${response.status}`);
+    }
+
+    // Clear form inputs on success
     document.getElementById('new-user-name').value = '';
     document.getElementById('new-user-email').value = '';
     document.getElementById('new-user-password').value = '';
+
     loadUsers();
     if (typeof populateFormDropdowns === 'function') populateFormDropdowns();
+
   } catch(e) {
     alert('Error adding user profile: ' + e.message);
   }
