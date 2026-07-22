@@ -1,34 +1,49 @@
 const { Connection, Request } = require('tedious');
 
-const config = {
-    server: process.env.DB_SERVER,
-    authentication: {
-        type: 'default',
-        options: {
-            userName: process.env.DB_USER,
-            password: process.env.DB_PASSWORD
-        }
-    },
-    options: {
-        database: process.env.DB_NAME,
-        encrypt: true,
-        trustServerCertificate: false
-    }
-};
-
 module.exports = async function (context, req) {
+    // Quick guard check: inspect if env variables are actually loaded
+    if (!process.env.DB_SERVER || !process.env.DB_USER) {
+        context.log.error("Missing Environment Variables on server!");
+        context.res = {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ error: "Server configuration missing database credentials." })
+        };
+        return;
+    }
+
+    const config = {
+        server: process.env.DB_SERVER,
+        authentication: {
+            type: 'default',
+            options: {
+                userName: process.env.DB_USER,
+                password: process.env.DB_PASSWORD
+            }
+        },
+        options: {
+            database: process.env.DB_NAME,
+            encrypt: true,
+            trustServerCertificate: false,
+            connectTimeout: 15000 // 15 sec timeout prevents silent hanging
+        }
+    };
+
     return new Promise((resolve) => {
         const connection = new Connection(config);
 
         connection.on('connect', (err) => {
             if (err) {
-                context.log("Database connection failure in getRecruits:", err);
-                context.res = { status: 500, body: "Database configuration layout error." };
+                context.log.error("Database connection failure in getRecruits:", err);
+                context.res = {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ error: "Failed to connect to the database.", details: err.message })
+                };
                 resolve();
                 return;
             }
 
-            // JOINs pull string names instead of raw foreign IDs
             const query = `
                 SELECT 
                     RecruitID,
@@ -44,14 +59,17 @@ module.exports = async function (context, req) {
 
             const request = new Request(query, (requestErr) => {
                 if (requestErr) {
-                    context.log("Query compilation breakdown error:", requestErr);
-                    context.res = { status: 500, body: "Query error execution trace." };
+                    context.log.error("Query compilation failure:", requestErr);
+                    context.res = {
+                        status: 500,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ error: "Failed to execute query." })
+                    };
                     connection.close();
                     resolve();
                 }
             });
 
-            // Inside api/getRecruits/index.js
             let recruitsDataset = [];
 
             request.on('row', (columns) => {
@@ -60,19 +78,17 @@ module.exports = async function (context, req) {
                     rowData[col.metadata.colName] = col.value;
                 });
                 
-                // Aligns database column aliases explicitly with frontend keys
                 recruitsDataset.push({
                     id: rowData.RecruitID,
                     name: rowData.FullName,
-                    position: rowData.PositionTitle, // Frontend looks for .position to render and filter
-                    source: rowData.SourceName,     // Frontend looks for .source
-                    date: rowData.DateSourced,       // Frontend looks for .date
-                    rate: rowData.ExpectedRate,      // Frontend looks for .rate
-                    outcome: rowData.OutcomeName     // Frontend looks for .outcome
+                    position: rowData.PositionTitle,
+                    source: rowData.SourceName,
+                    date: rowData.DateSourced,
+                    rate: rowData.ExpectedRate,
+                    outcome: rowData.OutcomeName
                 });
             });
 
-            // CRITICAL: Resolve only fires here once all records have fully streamed out
             request.on('requestCompleted', () => {
                 connection.close();
                 context.res = {
