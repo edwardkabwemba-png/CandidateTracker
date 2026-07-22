@@ -3,89 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <title>RecruitTrack - Recruitment Management Portal</title>
+  <!-- Third-party Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
-  <style>
-    :root {
-      --rt-navy: #1a2744;
-      --rt-teal: #0f6e56;
-      --rt-teal-light: #e1f5ee;
-      --rt-accent: #1D9E75;
-      --rt-red: #E24B4A;
-      --rt-red-light: #FCEBEB;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: system-ui, -apple-system, sans-serif; background: #f4f6f9; color: #333; }
-    .app { display: flex; height: 100vh; overflow: hidden; background: #fff; }
-    .sidebar { width: 220px; background: var(--rt-navy); display: flex; flex-direction: column; padding: 0; flex-shrink: 0; }
-    .sidebar-brand { padding: 18px 16px 14px; border-bottom: 0.5px solid rgba(255,255,255,0.1); }
-    .sidebar-brand .logo { font-size: 15px; font-weight: 500; color: #fff; letter-spacing: 0.3px; display: flex; align-items: center; gap: 8px; }
-    .sidebar-brand .sub { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 2px; }
-    .nav-section { padding: 12px 0 4px; }
-    .nav-label { font-size: 10px; color: rgba(255,255,255,0.35); padding: 0 16px 6px; letter-spacing: 0.8px; text-transform: uppercase; }
-    .nav-item { display: flex; align-items: center; gap: 9px; padding: 11px 16px; font-size: 13px; color: rgba(255,255,255,0.6); cursor: pointer; transition: all 0.15s; border-left: 2px solid transparent; text-decoration: none; }
-    .nav-item:hover { color: #fff; background: rgba(255,255,255,0.06); }
-    .nav-item.active { color: #fff; background: rgba(29,158,117,0.2); border-left-color: var(--rt-accent); }
-    .nav-item i { font-size: 16px; }
-    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    
-    .topbar { padding: 14px 20px; border-bottom: 0.5px solid #e1e4e8; display: flex; align-items: center; justify-content: space-between; background: #fff; flex-shrink: 0; }
-    .topbar-title { font-size: 15px; font-weight: 500; color: var(--rt-navy); }
-    .topbar-user { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #555; }
-    .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--rt-teal-light); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; color: var(--rt-teal); }
-    .content { flex: 1; overflow-y: auto; padding: 20px; }
-
-    /* Login Screen Layout */
-    .login-wrap { display: flex; align-items: center; justify-content: center; height: 100vh; width: 100%; background: #f0f2f5; }
-    .login-card { background: #fff; border: 0.5px solid #e1e4e8; border-radius: 8px; padding: 32px 28px; width: 340px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-    .login-logo { text-align: center; margin-bottom: 24px; }
-    .login-logo .name { font-size: 20px; font-weight: 500; color: var(--rt-navy); }
-    .login-logo .tag { font-size: 12px; color: #666; margin-top: 4px; }
-    .login-card label { font-size: 12px; color: #555; display: block; margin-bottom: 5px; font-weight: 500; }
-    .login-card input { width: 100%; padding: 10px; margin-bottom: 14px; font-size: 13px; border: 1px solid #ccc; border-radius: 6px; background: #fff; }
-    .btn-primary { background: var(--rt-navy); color: #fff; border: none; border-radius: 6px; padding: 10px; font-size: 13px; cursor: pointer; width: 100%; font-weight: 500; transition: opacity 0.15s; }
-    .btn-primary:hover { opacity: 0.9; }
-    .btn-entra { background: #fff; color: #1a1a1a; border: 1px solid #ccc; border-radius: 6px; padding: 10px; font-size: 13px; cursor: pointer; width: 100%; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 500; }
-    .btn-entra:hover { background: #f8f9fa; }
-    .divider { text-align: center; font-size: 11px; color: #999; margin: 12px 0; position: relative; }
-    .divider::before, .divider::after { content: ''; position: absolute; top: 50%; width: 35%; height: 0.5px; background: #e1e4e8; }
-    .divider::before { left: 0; }
-    .divider::after { right: 0; }
-
-    /* Dashboard Metric Cards */
-    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
-    .stat-card { background: #f8f9fa; border-radius: 6px; padding: 14px; border: 1px solid #e1e4e8; }
-    .stat-label { font-size: 11px; color: #666; margin-bottom: 4px; }
-    .stat-val { font-size: 22px; font-weight: 500; color: var(--rt-navy); }
-    .table-wrap { border: 0.5px solid #e1e4e8; border-radius: 6px; overflow: hidden; background: #fff; }
-    table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
-    thead th { background: #f8f9fa; padding: 10px; text-align: left; font-weight: 500; color: #555; font-size: 11px; border-bottom: 0.5px solid #e1e4e8; }
-    tbody td { padding: 10px; border-bottom: 0.5px solid #e1e4e8; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    tbody tr:last-child td { border-bottom: none; }
-    tbody tr:hover td { background: #f8f9fa; }
-    .badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 99px; font-weight: 500; }
-    .badge-green { background: var(--rt-teal-light); color: var(--rt-teal); }
-    .badge-amber { background: #FAEEDA; color: #854F0B; }
-    .add-btn { background: var(--rt-accent); color: #fff; border: none; border-radius: 6px; padding: 7px 14px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-    .add-btn:hover { background: var(--rt-teal); }
-    
-    /* Forms & Configuration Panels */
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
-    .form-group { display: flex; flex-direction: column; }
-    .form-group.full { grid-column: 1 / -1; }
-    .form-group label { font-size: 11px; color: #444; margin-bottom: 4px; font-weight: 500; }
-    .form-group label .req { color: var(--rt-red); }
-    .form-group input, .form-group select, .form-group textarea { padding: 9px; font-size: 13px; border: 1px solid #ccc; border-radius: 6px; background: #fff; width: 100%; }
-    .form-group textarea { resize: none; height: 64px; }
-    .field-err { font-size: 11px; color: var(--rt-red); margin-top: 3px; font-weight: 500; }
-    .phone-row { display: flex; gap: 6px; }
-    .phone-row input { flex: 1; }
-    .char-count { font-size: 10px; color: #777; text-align: right; margin-top: 2px; }
-    .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 0.5px solid #e1e4e8; }
-    .btn-sec { background: transparent; border: 1px solid #ccc; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; color: #333; }
-    .success-banner { background: var(--rt-teal-light); border: 0.5px solid #9FE1CB; border-radius: 6px; padding: 10px 14px; font-size: 13px; color: var(--rt-teal); display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-weight: 500; }
-    .err-banner { background: var(--rt-red-light); border: 0.5px solid #F7C1C1; border-radius: 6px; padding: 10px 14px; font-size: 13px; color: #A32D2D; margin-bottom: 14px; font-weight: 500; }
-    .section-head { font-size: 13px; font-weight: 500; color: var(--rt-navy); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 0.5px solid #e1e4e8; }
-  </style>
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -187,51 +108,101 @@
       </div>
     </div>
 
+    <!-- ADD RECRUIT PAGE -->
     <div class="content" id="page-add" style="display:none">
       <div id="form-success" class="success-banner" style="display:none"><i class="ti ti-circle-check" aria-hidden="true"></i> Recruit added safely to tracking dashboard logs!</div>
       <div id="form-err" class="err-banner" style="display:none"></div>
       <div class="section-head">New Recruit Details</div>
       <div class="form-grid">
+        
         <div class="form-group">
           <label>Recruiter <span class="req">*</span></label>
           <select id="f-recruiter"><option value="">— select recruiter —</option></select>
           <span class="field-err" id="e-recruiter"></span>
         </div>
+        
         <div class="form-group">
           <label>Date Sourced <span class="req">*</span></label>
           <input type="text" id="f-date" placeholder="yyyyMMdd e.g. 20260525" maxlength="8" oninput="fmtDate(this)" />
           <span class="field-err" id="e-date"></span>
         </div>
+        
         <div class="form-group">
           <label>First Name <span class="req">*</span></label>
           <input type="text" id="f-fname" placeholder="First name" />
           <span class="field-err" id="e-fname"></span>
         </div>
+        
         <div class="form-group">
           <label>Surname <span class="req">*</span></label>
           <input type="text" id="f-lname" placeholder="Surname" />
           <span class="field-err" id="e-lname"></span>
         </div>
+        
         <div class="form-group">
           <label>Source <span class="req">*</span></label>
           <select id="f-source"><option value="">— select source —</option></select>
           <span class="field-err" id="e-source"></span>
         </div>
+        
         <div class="form-group">
           <label>Notice Period <span class="req">*</span></label>
-          <select id="f-notice"><option value="">— select —</option><option value="1">Immediate</option><option value="2">1 Week</option><option value="3">2 Weeks</option><option value="4">1 Month</option><option value="5">2 Months</option><option value="6">3 Months</option><option value="7">6 Months</option></select>
+          <select id="f-notice">
+            <option value="">— select —</option>
+            <option value="1">Immediate</option>
+            <option value="2">1 Week</option>
+            <option value="3">2 Weeks</option>
+            <option value="4">1 Month</option>
+            <option value="5">2 Months</option>
+            <option value="6">3 Months</option>
+            <option value="7">6 Months</option>
+          </select>
           <span class="field-err" id="e-notice"></span>
         </div>
+
+        <div class="form-group">
+          <label>Current Rate (ZAR/hr or monthly)</label>
+          <input type="number" id="f-current-rate" placeholder="e.g. 40000" min="0" />
+          <span class="field-err" id="e-current-rate"></span>
+        </div>
+        
         <div class="form-group">
           <label>Expected Rate (ZAR) <span class="req">*</span></label>
           <input type="number" id="f-rate" placeholder="e.g. 45000" min="0" />
           <span class="field-err" id="e-rate"></span>
         </div>
+
+        <div class="form-group">
+          <label>Years of Experience</label>
+          <input type="number" id="f-experience" placeholder="e.g. 4.5" min="0" step="0.1" />
+          <span class="field-err" id="e-experience"></span>
+        </div>
+
+        <div class="form-group">
+          <label>Nationality</label>
+          <input type="text" id="f-nationality" placeholder="e.g. South African" />
+          <span class="field-err" id="e-nationality"></span>
+        </div>
+
+        <div class="form-group">
+          <label>Current Location</label>
+          <input type="text" id="f-location" placeholder="e.g. Johannesburg, GP" />
+          <span class="field-err" id="e-location"></span>
+        </div>
+        
         <div class="form-group">
           <label>Country of Residency <span class="req">*</span></label>
-          <select id="f-country" onchange="syncPhoneCode()"><option value="">— select country —</option><option value="1" data-code="+27">South Africa (+27)</option><option value="2" data-code="+263">Zimbabwe (+263)</option><option value="3" data-code="+260">Zambia (+260)</option><option value="4" data-code="+44">United Kingdom (+44)</option><option value="5" data-code="+1">United States (+1)</option></select>
+          <select id="f-country" onchange="syncPhoneCode()">
+            <option value="">— select country —</option>
+            <option value="1" data-code="+27">South Africa (+27)</option>
+            <option value="2" data-code="+263">Zimbabwe (+263)</option>
+            <option value="3" data-code="+260">Zambia (+260)</option>
+            <option value="4" data-code="+44">United Kingdom (+44)</option>
+            <option value="5" data-code="+1">United States (+1)</option>
+          </select>
           <span class="field-err" id="e-country"></span>
         </div>
+        
         <div class="form-group">
           <label>Contact Number <span class="req">*</span> <span style="font-size:10px;color:#777">(9 digits)</span></label>
           <div class="phone-row">
@@ -240,26 +211,48 @@
           </div>
           <span class="field-err" id="e-phone"></span>
         </div>
+
+        <div class="form-group">
+          <label>Alternate Number <span style="font-size:10px;color:#777">(Optional)</span></label>
+          <div class="phone-row">
+            <input type="text" id="f-alt-phonecode" placeholder="+27" style="width:70px" />
+            <input type="text" id="f-alt-phonenum" placeholder="9 digit secondary" maxlength="9" oninput="this.value=this.value.replace(/\D/g,'')" />
+          </div>
+          <span class="field-err" id="e-alt-phone"></span>
+        </div>
+        
         <div class="form-group">
           <label>Email Address <span class="req">*</span></label>
           <input type="email" id="f-email" placeholder="candidate@email.com" />
           <span class="field-err" id="e-email"></span>
         </div>
+        
         <div class="form-group">
           <label>Recruit Position <span class="req">*</span></label>
           <select id="f-job"><option value="">— select position —</option></select>
           <span class="field-err" id="e-job"></span>
         </div>
+        
         <div class="form-group">
           <label>Outcome</label>
-          <select id="f-outcome"><option value="">— select outcome —</option><option value="1">In Progress</option><option value="2">Placed</option><option value="3">Declined Offer</option><option value="4">Not Suitable</option><option value="5">On Hold</option><option value="6">Interviewing</option><option value="7">Offerred</option></select>
+          <select id="f-outcome">
+            <option value="">— select outcome —</option>
+            <option value="1">In Progress</option>
+            <option value="2">Placed</option>
+            <option value="3">Declined Offer</option>
+            <option value="4">Not Suitable</option>
+            <option value="5">On Hold</option>
+            <option value="6">Interviewing</option>
+            <option value="7">Offerred</option>
+          </select>
         </div>
 
-<div class="form-group full">
-  <label for="f-cv">Supporting Documents (Max 5)</label>
-  <input type="file" id="f-cv" name="f-cv" multiple accept=".pdf,.doc,.docx">
-  <span class="field-err" id="e-cv"></span>
-</div>
+        <div class="form-group full">
+          <label for="f-cv">Supporting Documents (Max 5)</label>
+          <input type="file" id="f-cv" name="f-cv" multiple accept=".pdf,.doc,.docx">
+          <span class="field-err" id="e-cv"></span>
+        </div>
+        
         <div class="form-group full">
           <label>Comments <span style="font-size:10px;color:#777">(max 200 characters)</span></label>
           <textarea id="f-comments" placeholder="Additional notes about the recruit..." maxlength="200" oninput="updateCharCount()"></textarea>
@@ -329,409 +322,7 @@
   </div>
 </div>
 
-<script>
-// --- GLOBAL DECLARED CORE STATE CACHE ---
-let allRecruitsData = [];
-
-// ------------------- SINGLE MAIN ROUTER FUNCTION -------------------
-function showPage(page) {
-  ['dashboard','add','jobs','sources','users'].forEach(p => {
-    const el = document.getElementById('page-'+p); if(el) el.style.display = 'none';
-    const n = document.getElementById('nav-'+p); if(n) n.classList.remove('active');
-  });
-  
-  const target = document.getElementById('page-'+page); if(target) target.style.display = '';
-  const nav = document.getElementById('nav-'+page); if(nav) nav.classList.add('active');
-  
-  const titles = {dashboard:'Dashboard', add:'Add New Recruit', jobs:'Manage Positions', sources:'Manage Sources', users:'Manage Users'};
-  document.getElementById('page-title').textContent = titles[page] || page;
-  
-  // Toggle the search container header using flex layout bounds
-  const sBox = document.getElementById('search-container');
-  if(sBox) sBox.style.display = (page === 'dashboard') ? 'flex' : 'none';
-
-  document.getElementById('form-success').style.display = 'none';
-  document.getElementById('form-err').style.display = 'none';
-
-  if (page === 'dashboard') {
-    const sInput = document.getElementById('recruit-search'); if(sInput) sInput.value = '';
-    const minInput = document.getElementById('filter-min-rate'); if(minInput) minInput.value = '';
-    const maxInput = document.getElementById('filter-max-rate'); if(maxInput) maxInput.value = '';
-    renderTable();
-  }
-  if (page === 'jobs') loadPositions();
-  if (page === 'sources') loadSources();
-  if (page === 'users') loadUsers();
-}
-
-// ------------------- DATA INGESTION LOGGER -------------------
-async function renderTable() {
-  const body = document.getElementById('recruit-table-body');
-  if(!body) return;
-  body.innerHTML = `<tr><td colspan="6" style="text-align:center;">Loading recruits from database...</td></tr>`;
-
-  try {
-    const response = await fetch('/api/getRecruits', { method: 'GET' }); 
-    if (!response.ok) throw new Error('Database fetch failed');
-    
-    allRecruitsData = await response.json();
-    filterRecruitsBySearch();
-    
-  } catch (error) {
-    body.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--rt-red);">Error connecting to database.</td></tr>`;
-    console.error('API Error:', error);
-  }
-}
-
-// ------------------- LIVE COMPOUND SEARCH AND CURRENCY SLIDER FILTER -------------------
-function filterRecruitsBySearch() {
-  const body = document.getElementById('recruit-table-body');
-  if (!body) return;
-
-  const searchStr = document.getElementById('recruit-search').value.toLowerCase().trim();
-  const minRate = parseFloat(document.getElementById('filter-min-rate').value) || 0;
-  const maxRate = parseFloat(document.getElementById('filter-max-rate').value) || Infinity;
-  
-  const filteredData = allRecruitsData.filter(r => {
-    const posVal = r.position ? String(r.position).toLowerCase() : '';
-    const nameVal = r.name ? String(r.name).toLowerCase() : '';
-    const matchesText = posVal.includes(searchStr) || nameVal.includes(searchStr);
-
-    const currentRate = parseFloat(r.rate) || 0;
-    const matchesRateRange = (currentRate >= minRate) && (currentRate <= maxRate);
-
-    return matchesText && matchesRateRange;
-  });
-
-  // Calculate Metrics
-  const totalCount = filteredData.length;
-  let placedCount = 0;
-  let inProgressCount = 0;
-  let thisMonthCount = 0;
-
-  const now = new Date();
-  const currentMonthPrefix = now.getFullYear().toString() + String(now.getMonth() + 1).padStart(2, '0');
-
-  filteredData.forEach(r => {
-    if (r.outcome === 'Placed') placedCount++;
-    else if (!r.outcome || r.outcome === 'In Progress' || r.outcome === 'On Hold') inProgressCount++;
-    if (r.date && String(r.date).trim().startsWith(currentMonthPrefix)) thisMonthCount++;
-  });
-
-  document.getElementById('stat-total').textContent = totalCount;
-  document.getElementById('stat-month').textContent = thisMonthCount;
-  document.getElementById('stat-placed').textContent = placedCount;
-  document.getElementById('stat-progress').textContent = inProgressCount;
-
-  if (filteredData.length === 0) {
-    body.innerHTML = `<tr><td colspan="6" style="text-align:center;">No matching positions found inside this range.</td></tr>`;
-    return;
-  }
-
-  body.innerHTML = filteredData.map(r => {
-    const bc = r.outcome === 'Placed' ? 'badge-green' : 'badge-amber';
-    return `<tr>
-      <td>${r.name || 'Unnamed'}</td>
-      <td>${r.position || 'Unassigned'}</td>
-      <td>${r.source || 'Unknown'}</td>
-      <td>${r.date || ''}</td>
-      <td>R ${r.rate ? Number(r.rate).toLocaleString() : '0'}</td>
-      <td><span class="badge ${bc}">${r.outcome || 'In Progress'}</span></td>
-    </tr>`;
-  }).join('');
-}
-
-// ------------------- AUTHENTICATION CONTROLLER SYSTEM -------------------
-function doLogin() {
-    const email = document.getElementById('login-email').value.trim();
-    const pass = document.getElementById('login-pass').value;
-    const errBanner = document.getElementById('login-err');
-    
-    if (!email || !pass) { 
-        errBanner.textContent = "Please fill in all layout credentials.";
-        errBanner.style.display = ''; 
-        return; 
-    }
-    
-    fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, password: pass })
-    })
-    .then(response => {
-        if (response.status === 401) throw new Error('Invalid user credentials.');
-        if (!response.ok) throw new Error('Database server connection issue.');
-        return response.json();
-    })
-    .then(data => {
-        errBanner.style.display = 'none';
-        document.getElementById('page-login').style.display = 'none';
-        document.getElementById('sidebar').style.display = 'flex';
-        document.getElementById('topbar').style.display = 'flex';
-        
-        // Extract parameters safely from JSON configuration response
-        document.getElementById('user-name').textContent = data.name || 'Recruiter';
-        document.getElementById('user-avatar').textContent = data.avatar || 'U';
-        
-        showPage('dashboard');
-        populateFormDropdowns();
-    })
-    .catch(error => {
-        errBanner.textContent = error.message;
-        errBanner.style.display = '';
-    });
-}
-
-function entralogin() {
-  document.getElementById('page-login').style.display='none';
-  document.getElementById('sidebar').style.display='flex';
-  document.getElementById('topbar').style.display='flex';
-  document.getElementById('user-name').textContent='Entra User';
-  document.getElementById('user-avatar').textContent='EU';
-  showPage('dashboard');
-  populateFormDropdowns();
-}
-
-function logout() {
-  document.getElementById('sidebar').style.display='none';
-  document.getElementById('page-login').style.display='flex';
-  document.getElementById('topbar').style.display='none';
-  ['dashboard','add','jobs','sources','users'].forEach(p => {
-    const el = document.getElementById('page-'+p); if(el) el.style.display='none';
-  });
-}
-
-// ------------------- ADMIN & CONFIG MANAGEMENT METHODS -------------------
-async function loadUsers() {
-  const tbody = document.getElementById('users-list'); if(!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="3">Loading system users...</td></tr>`;
-  try {
-    const res = await fetch('/api/getUsers');
-    const data = await res.json();
-    tbody.innerHTML = data.map(item => `
-      <tr>
-        <td><strong>${item.name || 'Unnamed'}</strong></td>
-        <td>${item.email || ''}</td>
-        <td><span class="avatar">${item.avatar || 'U'}</span></td>
-      </tr>
-    `).join('');
-  } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="3" style="color:var(--rt-red)">Error loading users pipeline.</td></tr>`;
-  }
-}
-
-async function addUser() {
-  const name = document.getElementById('new-user-name').value.trim();
-  const email = document.getElementById('new-user-email').value.trim();
-  const password = document.getElementById('new-user-password').value;
-  
-  if(!name || !email || !password) {
-    alert('Please fill out all user credentials.');
-    return;
-  }
-  try {
-    const response = await fetch('/api/saveUsers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password })
-    });
-    if(!response.ok) throw new Error('Could not write database rows.');
-    document.getElementById('new-user-name').value = '';
-    document.getElementById('new-user-email').value = '';
-    document.getElementById('new-user-password').value = '';
-    loadUsers();
-    populateFormDropdowns();
-  } catch(e) {
-    alert('Error adding user profile: ' + e.message);
-  }
-}
-
-async function loadPositions() {
-  const tbody = document.getElementById('jobs-list'); if(!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="2">Loading layout tables...</td></tr>`;
-  try {
-    const res = await fetch('/api/getPositions');
-    const data = await res.json();
-    tbody.innerHTML = data.map(item => `<tr><td>${item.title}</td><td><span class="badge badge-green">Active</span></td></tr>`).join('');
-  } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="2" style="color:var(--rt-red)">Error loading positions.</td></tr>`;
-  }
-}
-
-async function loadSources() {
-  const tbody = document.getElementById('sources-list'); if(!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="2">Loading layout tables...</td></tr>`;
-  try {
-    const res = await fetch('/api/getSources');
-    const data = await res.json();
-    tbody.innerHTML = data.map(item => `<tr><td>${item.title}</td><td><span class="badge badge-green">Active</span></td></tr>`).join('');
-  } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="2" style="color:var(--rt-red)">Error loading sources.</td></tr>`;
-  }
-}
-
-async function addItem(type) {
-  const inputId = type === 'job' ? 'new-job' : 'new-source';
-  const val = document.getElementById(inputId).value.trim();
-  if(!val) return;
-  const endpoint = type === 'job' ? '/api/savePositions' : '/api/saveSources';
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: val })
-    });
-    if (!response.ok) throw new Error('Database layout update issue.');
-    document.getElementById(inputId).value = '';
-    if (type === 'job') loadPositions(); else loadSources();
-    populateFormDropdowns();
-  } catch (error) {
-    alert('Error adding data entry: ' + error.message);
-  }
-}
-
-
-// ------------------- AUXILIARY FORM VALIDATION & SELECTION BUILDERS -------------------
-function syncPhoneCode() {
-  const sel = document.getElementById('f-country');
-  const opt = sel.options[sel.selectedIndex];
-  if(opt && opt.dataset.code) document.getElementById('f-phonecode').value = opt.dataset.code;
-}
-function fmtDate(el) { el.value = el.value.replace(/\D/g,'').slice(0,8); }
-function updateCharCount() { document.getElementById('char-count').textContent = document.getElementById('f-comments').value.length; }
-
-// Helper to convert files to Base64
-function readFileAsBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(',')[1]); // Strip the data URL prefix
-        reader.onerror = error => reject(error);
-        reader.readAsDataURL(file);
-    });
-}
-
-async function submitForm() {
-    // Reset status banners immediately upon click execution
-    document.getElementById('form-err').style.display = 'none';
-    document.getElementById('form-success').style.display = 'none';
-    
-    let valid = true;
-    
-    // 1. Verify standard registration text fields
-    const fields = ['f-recruiter', 'f-date', 'f-fname', 'f-lname', 'f-source', 'f-notice', 'f-rate', 'f-country', 'f-phonenum', 'f-email', 'f-job'];
-    fields.forEach(id => { 
-        const el = document.getElementById(id); 
-        if (!el || !el.value.trim()) valid = false; 
-    });
-
-    // 2. Updated multi-file validation constraint check
-    const fileInput = document.getElementById('f-cv');
-    const files = fileInput ? fileInput.files : [];
-    
-    if (files.length === 0) {
-        valid = false;
-        document.getElementById('e-cv').textContent = 'Please attach at least one document (CV or Supporting files).';
-    } else {
-        document.getElementById('e-cv').textContent = '';
-    }
-
-    // Halt execution early if client fields fail basic checks
-    if (!valid) {
-        const err = document.getElementById('form-err');
-        err.textContent = 'Please complete all required fields and upload supporting documentation before saving.';
-        err.style.display = '';
-        return;
-    }
-
-    try {
-        const fileDataArray = [];
-        // Enforce the strict threshold maximum limit of 5 files safely
-        const limit = Math.min(files.length, 5);
-    
-        // 3. Process files through asynchronous Base64 compiler streams
-        for (let i = 0; i < limit; i++) {
-            const file = files[i];
-            const base64String = await readFileAsBase64(file);
-            
-            fileDataArray.push({
-                fileName: file.name,
-                // Cleanly slices off metadata headers if FileReader passes them through
-                base64: base64String.includes(',') ? base64String.split(',')[1] : base64String 
-            });
-        }
-
-        // 4. Construct integrated JSON payload structure
-        const payload = {
-            recruiterId: document.getElementById('f-recruiter').value,
-            dateSourced: document.getElementById('f-date').value,
-            firstName: document.getElementById('f-fname').value.trim(),
-            surname: document.getElementById('f-lname').value.trim(),
-            sourceId: document.getElementById('f-source').value,
-            noticePeriodId: document.getElementById('f-notice').value,
-            expectedRate: parseFloat(document.getElementById('f-rate').value) || 0,
-            countryId: document.getElementById('f-country').value,
-            phone: document.getElementById('f-phonecode').value + document.getElementById('f-phonenum').value.trim(),
-            email: document.getElementById('f-email').value.trim(),
-            positionId: document.getElementById('f-job').value,
-            outcomeId: document.getElementById('f-outcome').value || "1",
-            comments: document.getElementById('f-comments').value.trim(),
-            files: fileDataArray // Array containing all mapped binary payloads 
-        };
-
-        // 5. Submit request directly to Azure Managed Integrated API endpoint
-        const response = await fetch('/api/saveRecruit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        // 6. Capture real, deep errors thrown by Blob Storage or database constraints
-        if (!response.ok) {
-            const serverErrorText = await response.text();
-            throw new Error(serverErrorText || 'Unknown backend resource failure.');
-        }
-        
-        // 7. Render success layout status banners and flush cache fields cleanly
-        document.getElementById('form-success').style.display = 'flex';
-        clearForm();
-        document.getElementById('f-cv').value = ''; // Safely clears out file browser target caches
-        
-        setTimeout(() => { 
-            document.getElementById('form-success').style.display = 'none'; 
-        }, 3000);
-
-    } catch (error) {
-        const err = document.getElementById('form-err');
-        // Displays clear diagnostics straight onto your frontend view layout
-        err.textContent = `Save Failed — ${error.message}`;
-        err.style.display = '';
-    }
-}
-
-function clearForm() {
-  ['f-recruiter','f-date','f-fname','f-lname','f-source','f-notice','f-rate','f-country','f-phonecode','f-phonenum','f-email','f-job','f-outcome','f-comments'].forEach(id => {
-    const el = document.getElementById(id); if(el) el.value = '';
-  });
-  document.getElementById('char-count').textContent = '0';
-}
-
-async function populateFormDropdowns() {
-    try {
-        const posRes = await fetch('/api/getPositions');
-        const positions = await posRes.json();
-        document.getElementById('f-job').innerHTML = '<option value="">— select position —</option>' + positions.map(p => `<option value="${p.id}">${p.title}</option>`).join('');
-
-        const srcRes = await fetch('/api/getSources');
-        const sources = await srcRes.json();
-        document.getElementById('f-source').innerHTML = '<option value="">— select source —</option>' + sources.map(s => `<option value="${s.id}">${s.title}</option>`).join('');
-            
-        const recRes = await fetch('/api/getUsers');
-        const recruiters = await recRes.json();
-        document.getElementById('f-recruiter').innerHTML = '<option value="">— select recruiter —</option>' + recruiters.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
-    } catch (err) {
-        console.error('Error fetching data dropdown arrays:', err);
-    }
-}
-</script>
+<!-- Core Business Logic Application Flow Script -->
+<script src="script.js"></script>
 </body>
 </html>
