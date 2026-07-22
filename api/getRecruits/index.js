@@ -31,18 +31,15 @@ module.exports = async function (context, req) {
             // JOINs pull string names instead of raw foreign IDs
             const query = `
                 SELECT 
-                    r.RecruitID,
-                    (r.FirstName + ' ' + r.Surname) AS FullName,
-                    p.PositionTitle,
-                    s.SourceName,
-                    r.DateSourced,
-                    r.ExpectedRate,
-                    o.OutcomeName
-                FROM [dbo].[Recruits] r
-                LEFT JOIN [dbo].[Positions] p ON r.PositionID = p.PositionID
-                LEFT JOIN [dbo].[Sources] s ON r.SourceID = s.SourceID
-                LEFT JOIN [dbo].[Outcomes] o ON r.OutcomeID = o.OutcomeID
-                ORDER BY r.DateSourced DESC
+                    RecruitID,
+                    (Name + ' ' + Surname) AS FullName,
+                    Role as PositionTitle,
+                    Source as SourceName,
+                    Date as DateSourced,
+                    Expected_Rate as ExpectedRate,
+                    Outcome as OutcomeName
+                FROM [dbo].[Candidates_data]
+                ORDER BY Date Desc
             `;
 
             const request = new Request(query, (requestErr) => {
