@@ -1,27 +1,51 @@
 const { Connection, Request, TYPES } = require('tedious');
-const crypto = require('crypto'); // Built-in Node.js module (completely stable, zero-dependency)
+const crypto = require('crypto'); // Built-in Node.js module
 
-// Configuration pulling securely from Azure App Settings environment variables
-const config = {
-    server: process.env.DB_SERVER,
-    authentication: { 
-        type: 'default', 
-        options: { 
-            userName: process.env.DB_USER, 
-            password: process.env.DB_PASSWORD 
-        } 
-    },
-    options: { 
-        database: process.env.DB_NAME, 
-        encrypt: true, 
-        trustServerCertificate: false 
-    }
-};
+// Helper to parse ADO.NET connection string into Tedious config
+function parseConnectionString(connectionString) {
+    const config = { options: { encrypt: true, trustServerCertificate: false, connectTimeout: 15000 } };
+    if (!connectionString) return config;
+
+    const parts = connectionString.split(';').reduce((acc, current) => {
+        const [key, ...value] = current.split('=');
+        if (key && value.length) {
+            acc[key.trim().toLowerCase()] = value.join('=').trim();
+        }
+        return acc;
+    }, {});
+
+    const rawServer = parts['server'] || parts['data source'] || '';
+    config.server = rawServer.replace(/^tcp:/i, '').split(',')[0];
+
+    config.authentication = {
+        type: 'default',
+        options: {
+            userName: parts['user id'] || parts['uid'] || '',
+            password: parts['password'] || parts['pwd'] || ''
+        }
+    };
+
+    config.options.database = parts['initial catalog'] || parts['database'] || '';
+    return config;
+}
 
 module.exports = async function (context, req) {
     context.log('Processing secure system user registration request...');
 
     try {
+        const connectionString = process.env.SqlConnectionString;
+
+        // Guard check for connection string environment variable
+        if (!connectionString) {
+            context.log("Missing SqlConnectionString environment variable!");
+            context.res = {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ error: "Server configuration missing database connection string." })
+            };
+            return;
+        }
+
         // 1. Safe JSON Body Check
         let body = req.body;
         if (typeof body === 'string') {
@@ -59,8 +83,8 @@ module.exports = async function (context, req) {
         // 4. Securely Hash the Incoming Plaintext Password with SHA-256
         const securePasswordHash = crypto.createHash('sha256').update(body.password).digest('hex');
 
-        // 5. Execute Database Write Operation
-        await saveUserToDatabase(body.email.trim(), securePasswordHash, body.name.trim(), initials, context);
+        // 5. Execute Database Write Operation using SqlConnectionString
+        await saveUserToDatabase(connectionString, body.email.trim(), securePasswordHash, body.name.trim(), initials, context);
 
         // 6. Return Clean Success Payload Response
         context.res = { 
@@ -82,8 +106,9 @@ module.exports = async function (context, req) {
 /**
  * Isolated Helper function to handle the database write loop sequentially.
  */
-function saveUserToDatabase(email, passwordHash, fullName, initials, context) {
+function saveUserToDatabase(connectionString, email, passwordHash, fullName, initials, context) {
     return new Promise((resolve, reject) => {
+        const config = parseConnectionString(connectionString);
         const connection = new Connection(config);
 
         connection.on('connect', (err) => {
