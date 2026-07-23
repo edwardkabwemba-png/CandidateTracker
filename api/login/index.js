@@ -131,9 +131,18 @@ module.exports = async function (context, req) {
 /**
  * Helper function to handle tedious lifecycle operations sequentially using Promises.
  */
+/**
+ * Helper function to handle tedious lifecycle operations sequentially using Promises.
+ */
 function getUserFromDatabase(connectionString, email, context) {
     return new Promise((resolve, reject) => {
         const config = parseConnectionString(connectionString);
+        
+        // 1. FIX: Instantiate the Connection object!
+        const connection = new Connection(config);
+        
+        // 2. FIX: Declare userResult so the row event can assign to it
+        let userResult = null;
 
         connection.on('connect', (err) => {
             if (err) {
@@ -147,7 +156,7 @@ function getUserFromDatabase(connectionString, email, context) {
             `;
 
             const request = new Request(query, (requestErr) => {
-                // Explicitly clean up database connection resources when the statement finishes
+                // Explicitly clean up database connection resources
                 connection.close();
 
                 if (requestErr) {
