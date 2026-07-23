@@ -282,17 +282,6 @@ async function loadPositions() {
   }
 }
 
-async function loadSources() {
-  const tbody = document.getElementById('sources-list'); if(!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="2">Loading layout tables...</td></tr>`;
-  try {
-    const res = await fetch('/api/getSources');
-    const data = await res.json();
-    tbody.innerHTML = data.map(item => `<tr><td>${item.title}</td><td><span class="badge badge-green">Active</span></td></tr>`).join('');
-  } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="2" style="color:var(--rt-red)">Error loading sources.</td></tr>`;
-  }
-}
 
 async function addItem(type) {
   const inputId = type === 'job' ? 'new-job' : 'new-source';
@@ -316,7 +305,8 @@ async function addItem(type) {
 
 // Note: Ensure functions missing from original clip snippet like syncPhoneCode(), 
 // fmtDate(), updateCharCount(), clearForm(), and submitForm() are appended if needed.
-async function loadSources() {
+// 1. FOR THE FORM DROPDOWN (<select id="f-source">)
+async function populateSourceDropdown() {
   const sourceSelect = document.getElementById('f-source');
   if (!sourceSelect) return;
 
@@ -334,7 +324,6 @@ async function loadSources() {
     // Append database records as dropdown options
     sources.forEach(source => {
       const option = document.createElement('option');
-      // Use SourceID as value, and SourceName for display
       option.value = source.SourceID || source.SourceName;
       option.textContent = source.SourceName;
       sourceSelect.appendChild(option);
@@ -346,9 +335,44 @@ async function loadSources() {
   }
 }
 
+// 2. FOR THE MANAGE SOURCES PAGE TABLE (<tbody id="sources-list">)
+async function renderSourcesTable() {
+  const tbody = document.getElementById('sources-list'); 
+  if (!tbody) return;
+  
+  tbody.innerHTML = `<tr><td colspan="2">Loading layout tables...</td></tr>`;
+  try {
+    const res = await fetch('/api/getSources');
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    
+    const data = await res.json();
+    
+    if (!Array.isArray(data) || data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="2">No sources found.</td></tr>`;
+      return;
+    }
+
+    // Note: Uses item.SourceName or item.title depending on your API object schema
+    tbody.innerHTML = data.map(item => `
+      <tr>
+        <td>${item.SourceName || item.title || 'N/A'}</td>
+        <td><span class="badge badge-green">Active</span></td>
+      </tr>
+    `).join('');
+
+  } catch (err) {
+    console.error('Error loading sources table:', err);
+    tbody.innerHTML = `<tr><td colspan="2" style="color:var(--rt-red)">Error loading sources.</td></tr>`;
+  }
+}
+
 // Call loadSources when initializing the app or navigating to the 'add' page
 document.addEventListener('DOMContentLoaded', () => {
-  loadSources();
+    // Populate the dropdown on the Recruit Form (if <select id="f-source"> exists)
+    populateSourceDropdown();
+
+    // Populate the table on the Manage Sources Page (if <tbody id="sources-list"> exists)
+    renderSourcesTable();
 });
 
 async function loadPositions() {
@@ -604,8 +628,8 @@ async function submitForm(event) {
         email: getVal('f-email') || getVal('candidate-email'),
         currentLocation: getVal('f-location') || getVal('current-location'),
         nationality: getVal('f-nationality') || getVal('nationality'),
-        currentRate: getVal('f-crate') || getVal('current-rate'),
-        expectedRate: getVal('f-erate') || getVal('expected-rate'),
+        currentRate: getVal('f-crate') || getVal('f-current-rate'),
+        expectedRate: getVal('f-erate') || getVal('f-expected-rate'),
         yearsOfExperience: getVal('f-yoe') || getVal('years-experience'),
         comments: getVal('f-comments') || getVal('comments'),
         files: filesArray
