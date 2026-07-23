@@ -207,7 +207,7 @@
           <label>Contact Number <span class="req">*</span> <span style="font-size:10px;color:#777">(9 digits)</span></label>
           <div class="phone-row">
             <input type="text" id="f-phonecode" placeholder="+27" style="width:70px" readonly />
-            <input type="text" id="f-phonenum" placeholder="123456789" maxlength="9" oninput="this.value=this.value.replace(/\D/g,'')" />
+            <input type="tel" id="contact-number" placeholder="123456789" maxlength="9" oninput="this.value=this.value.replace(/\D/g,'')" />
           </div>
           <span class="field-err" id="e-phone"></span>
         </div>
@@ -216,7 +216,7 @@
           <label>Alternate Number <span style="font-size:10px;color:#777">(Optional)</span></label>
           <div class="phone-row">
             <input type="text" id="f-alt-phonecode" placeholder="+27" style="width:70px" />
-            <input type="text" id="f-alt-phonenum" placeholder="9 digit secondary" maxlength="9" oninput="this.value=this.value.replace(/\D/g,'')" />
+            <input type="tel" id="alt-contact-number" placeholder="9 digit secondary" maxlength="9" oninput="this.value=this.value.replace(/\D/g,'')" />
           </div>
           <span class="field-err" id="e-alt-phone"></span>
         </div>
