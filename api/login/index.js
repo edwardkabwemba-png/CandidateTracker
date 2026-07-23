@@ -1,63 +1,28 @@
 const { Connection, Request, TYPES } = require('tedious');
-const crypto = require('crypto'); // Built-in Node.js module
+const crypto = require('crypto'); // Built-in Node.js module (highly stable, zero-dependency)
 
-// Helper to parse ADO.NET connection string into Tedious config
-function parseConnectionString(connectionString) {
-    const config = { options: { encrypt: true, trustServerCertificate: false, connectTimeout: 15000 } };
-    if (!connectionString) return config;
-
-    const parts = connectionString.split(';').reduce((acc, current) => {
-        const [key, ...value] = current.split('=');
-        if (key && value.length) {
-            acc[key.trim().toLowerCase()] = value.join('=').trim();
-        }
-        return acc;
-    }, {});
-
-    const rawServer = parts['server'] || parts['data source'] || '';
-    config.server = rawServer.replace(/^tcp:/i, '').split(',')[0];
-
-    config.authentication = {
+// Configuration pulling securely from Azure App Settings environment variables
+const config = {
+    server: process.env.DB_SERVER,
+    authentication: {
         type: 'default',
-        options: {
-            userName: parts['user id'] || parts['uid'] || '',
-            password: parts['password'] || parts['pwd'] || ''
+        options: { 
+            userName: process.env.DB_USER, 
+            password: process.env.DB_PASSWORD 
         }
-    };
-
-    config.options.database = parts['initial catalog'] || parts['database'] || '';
-    return config;
-}
+    },
+    options: { 
+        database: process.env.DB_NAME, 
+        encrypt: true, 
+        trustServerCertificate: false 
+    }
+};
 
 module.exports = async function (context, req) {
     context.log('Processing secure application login request...');
     
     try {
-        const connectionString = process.env.SqlConnectionString;
-
-        // Guard check for environment variable
-        if (!connectionString) {
-            context.log("Missing SqlConnectionString environment variable!");
-            context.res = {
-                status: 500,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ error: "Server configuration missing database connection string." })
-            };
-            return;
-        }
-
-        // Force parse body if stringified
-        let body = req.body;
-        if (typeof body === 'string') {
-            try {
-                body = JSON.parse(body);
-            } catch (e) {
-                context.res = { status: 400, body: "Malformed JSON payload." };
-                return;
-            }
-        }
-
-        const { email, password } = body || {};
+        const { email, password } = req.body || {};
 
         if (!email || !password) {
             context.res = { 
@@ -68,8 +33,8 @@ module.exports = async function (context, req) {
             return;
         }
 
-        // 1. Fetch user data using connection string
-        const matchedUser = await getUserFromDatabase(connectionString, email.trim(), context);
+        // 1. Fetch user data wrapped sequentially in a Promise wrapper
+        const matchedUser = await getUserFromDatabase(email.trim(), context);
 
         if (!matchedUser) {
             context.log.warn(`User target matching identifier not found: ${email}`);
@@ -97,7 +62,7 @@ module.exports = async function (context, req) {
         // 3. Hash the incoming password using SHA-256 to compare against the DB
         const incomingHash = crypto.createHash('sha256').update(password).digest('hex');
 
-        // Note: 'password === dbHash' acts as a temporary fallback for existing plaintext test accounts
+        // Note: 'password === dbHash' acts as a temporary fallback for your existing plaintext test accounts
         if (incomingHash === dbHash || password === dbHash) {
             context.log('Credential verification confirmed.');
             context.res = {
@@ -129,11 +94,10 @@ module.exports = async function (context, req) {
 };
 
 /**
- * Helper function to handle tedious lifecycle operations using connection string.
+ * Helper function to handle tedious lifecycle operations sequentially using Promises.
  */
-function getUserFromDatabase(connectionString, email, context) {
+function getUserFromDatabase(email, context) {
     return new Promise((resolve, reject) => {
-        const config = parseConnectionString(connectionString);
         const connection = new Connection(config);
         let userResult = null;
 
@@ -149,6 +113,7 @@ function getUserFromDatabase(connectionString, email, context) {
             `;
 
             const request = new Request(query, (requestErr) => {
+                // Explicitly clean up database connection resources when the statement finishes
                 connection.close();
 
                 if (requestErr) {
@@ -158,8 +123,10 @@ function getUserFromDatabase(connectionString, email, context) {
                 resolve(userResult);
             });
 
+            // Map standard parameter types safely
             request.addParameter('Email', TYPES.VarChar, email);
 
+            // Row emission tracker mapping column properties out cleanly
             request.on('row', (columns) => {
                 let userObj = {};
                 columns.forEach((col) => {
@@ -171,6 +138,7 @@ function getUserFromDatabase(connectionString, email, context) {
             connection.execSql(request);
         });
 
+        // Initialize connection state explicitly
         connection.connect();
     });
 }
