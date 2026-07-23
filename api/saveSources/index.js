@@ -37,7 +37,7 @@ module.exports = async function (context, req) {
         context.res = {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ error: "Server configuration missing database connection string." })
+            body: { error: "Server configuration missing database connection string." }
         };
         return;
     }
@@ -48,13 +48,21 @@ module.exports = async function (context, req) {
         try {
             body = JSON.parse(body);
         } catch (e) {
-            context.res = { status: 400, body: "Malformed JSON payload." };
+            context.res = { 
+                status: 400, 
+                headers: { 'Content-Type': 'application/json' },
+                body: { error: "Malformed JSON payload." } 
+            };
             return;
         }
     }
 
-    if (!body || !body.title) {
-        context.res = { status: 400, body: "Source title parameter is required." };
+    if (!body || !body.title || !body.title.trim()) {
+        context.res = { 
+            status: 400, 
+            headers: { 'Content-Type': 'application/json' },
+            body: { error: "Source title parameter is required." } 
+        };
         return;
     }
 
@@ -62,32 +70,60 @@ module.exports = async function (context, req) {
 
     return new Promise((resolve) => {
         const connection = new Connection(config);
+        let insertedSource = null;
 
         connection.on('connect', (err) => {
             if (err) { 
-                context.res = { status: 500, body: `DB Connection Error: ${err.message}` }; 
+                context.log("DB Connection error in saveSources:", err);
+                context.res = { 
+                    status: 500, 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: { error: `DB Connection Error: ${err.message}` } 
+                }; 
                 resolve(); 
                 return; 
             }
 
-            const query = `INSERT INTO [dbo].[Sources] (SourceName, CreatedAt) VALUES (@Title, GETDATE())`;
+            // Using OUTPUT INSERTED.SourceID to retrieve the generated ID
+            const query = `
+                INSERT INTO [dbo].[Sources] (SourceName, CreatedAt) 
+                OUTPUT INSERTED.SourceID, INSERTED.SourceName
+                VALUES (@Title, GETDATE());
+            `;
             
             const request = new Request(query, (requestErr) => {
+                connection.close();
+
                 if (requestErr) {
                     context.log("SQL Write error in saveSources:", requestErr);
-                    context.res = { status: 500, body: `SQL Error: ${requestErr.message}` };
+                    context.res = { 
+                        status: 500, 
+                        headers: { 'Content-Type': 'application/json' },
+                        body: { error: `SQL Error: ${requestErr.message}` } 
+                    };
                 } else {
                     context.res = { 
                         status: 200, 
                         headers: { 'Content-Type': 'application/json' }, 
-                        body: { success: true } 
+                        body: { 
+                            success: true, 
+                            source: insertedSource || { SourceName: body.title.trim() } 
+                        } 
                     };
                 }
-                connection.close(); 
+                
                 resolve();
             });
 
-            request.addParameter('Title', TYPES.NVarChar, body.title);
+            // Capture the inserted row details returned by OUTPUT
+            request.on('row', (columns) => {
+                insertedSource = {};
+                columns.forEach((col) => {
+                    insertedSource[col.metadata.colName] = col.value;
+                });
+            });
+
+            request.addParameter('Title', TYPES.NVarChar, body.title.trim());
             connection.execSql(request);
         });
 
