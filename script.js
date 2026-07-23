@@ -529,6 +529,13 @@ function updateCharCount(textarea) {
     }
 }
 
+// Helper to get selected text instead of selected option value
+const getSelectedText = (id) => {
+    const el = document.getElementById(id);
+    if (!el || el.selectedIndex === -1) return '';
+    return el.options[el.selectedIndex].text.trim();
+};
+
 async function submitForm(event) {
     if (event) event.preventDefault();
     console.log("Submitting form to /api/saveRecruit...");
@@ -566,7 +573,7 @@ async function submitForm(event) {
     // 2. Map payload keys to match backend expected parameters
     const candidateData = {
         date: getVal('f-date') || getVal('sourced-date'),
-        recruiter: getVal('f-recruiter') || getVal('recruiter'),
+        recruiter: getSelectedText('candidate-recruiter') || getSelectedText('recruiter'),
         name: getVal('f-fname') || getVal('first-name'),
         surname: getVal('f-lname') || getVal('surname'),
         role: getVal('f-job') || getVal('recruit-position'),
