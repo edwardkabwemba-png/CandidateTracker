@@ -508,3 +508,90 @@ function clearForm() {
   // Reset date back to today
   setDefaultSourcedDate();
 }
+
+// 1. Sync phone country code dropdown with input formatting
+function syncPhoneCode() {
+    const countrySelect = document.getElementById('phone-country');
+    const phoneInput = document.getElementById('phone-number');
+    if (countrySelect && phoneInput) {
+        // Keeps focus or updates placeholder prefix if needed
+        phoneInput.placeholder = countrySelect.value === 'US' ? '(555) 000-0000' : '+1 555 000 0000';
+    }
+}
+
+// 2. Character counter for notes/comments textarea
+function updateCharCount(textarea) {
+    const charCounter = document.getElementById('char-count');
+    if (charCounter && textarea) {
+        const currentLength = textarea.value.length;
+        const maxLength = textarea.maxLength > 0 ? textarea.maxLength : 500;
+        charCounter.textContent = `${currentLength}/${maxLength}`;
+    }
+}
+
+// 3. Submit New Candidate Form to API
+async function submitForm(event) {
+    if (event) event.preventDefault(); // Prevent standard browser form submission
+
+    const fSuccess = document.getElementById('form-success');
+    const fErr = document.getElementById('form-err');
+    
+    // Hide previous banners
+    if (fSuccess) fSuccess.style.display = 'none';
+    if (fErr) fErr.style.display = 'none';
+
+    // Gather input values from the Add Candidate form
+    const candidateData = {
+        name: document.getElementById('candidate-name')?.value.trim(),
+        email: document.getElementById('candidate-email')?.value.trim(),
+        phone: document.getElementById('phone-number')?.value.trim(),
+        position_id: document.getElementById('candidate-position')?.value,
+        source_id: document.getElementById('candidate-source')?.value,
+        recruiter_id: document.getElementById('candidate-recruiter')?.value,
+        sourced_date: document.getElementById('sourced-date')?.value,
+        rate: document.getElementById('candidate-rate')?.value,
+        notes: document.getElementById('candidate-notes')?.value.trim()
+    };
+
+    // Simple client-side validation
+    if (!candidateData.name || !candidateData.position_id) {
+        if (fErr) {
+            fErr.textContent = "Please fill in all required fields (Name and Position).";
+            fErr.style.display = 'block';
+        }
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/addCandidate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(candidateData)
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.message || 'Failed to add candidate to database.');
+        }
+
+        // Success!
+        if (fSuccess) {
+            fSuccess.textContent = "Candidate successfully added!";
+            fSuccess.style.display = 'block';
+        }
+
+        // Clear inputs after success
+        const addForm = document.getElementById('add-candidate-form');
+        if (addForm) addForm.reset();
+
+        // Refresh the main table dataset in the background
+        if (typeof renderTable === 'function') renderTable();
+
+    } catch (error) {
+        console.error("Error adding candidate:", error);
+        if (fErr) {
+            fErr.textContent = error.message;
+            fErr.style.display = 'block';
+        }
+    }
+}
