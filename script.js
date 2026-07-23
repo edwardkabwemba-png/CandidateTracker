@@ -272,3 +272,37 @@ async function addItem(type) {
 
 // Note: Ensure functions missing from original clip snippet like syncPhoneCode(), 
 // fmtDate(), updateCharCount(), clearForm(), and submitForm() are appended if needed.
+async function loadSources() {
+  const sourceSelect = document.getElementById('f-source');
+  if (!sourceSelect) return;
+
+  try {
+    const response = await fetch('/api/getSources');
+    if (!response.ok) {
+      throw new Error(`Server returned HTTP status ${response.status}`);
+    }
+
+    const sources = await response.json();
+
+    // Reset dropdown to default option
+    sourceSelect.innerHTML = '<option value="">— select source —</option>';
+
+    // Append database records as dropdown options
+    sources.forEach(source => {
+      const option = document.createElement('option');
+      // Use SourceID as value, and SourceName for display
+      option.value = source.SourceID || source.SourceName;
+      option.textContent = source.SourceName;
+      sourceSelect.appendChild(option);
+    });
+
+  } catch (error) {
+    console.error('Error loading sources from DB:', error);
+    sourceSelect.innerHTML = '<option value="">— failed to load sources —</option>';
+  }
+}
+
+// Call loadSources when initializing the app or navigating to the 'add' page
+document.addEventListener('DOMContentLoaded', () => {
+  loadSources();
+});
