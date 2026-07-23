@@ -140,11 +140,11 @@ module.exports = async function (context, req) {
 
                 // ADDED [Outcome] COLUMN AND PARAMETER TO INSERT STATEMENT
                 const query = `
-                    INSERT INTO [dbo].[Recruits] (
+                    INSERT INTO [dbo].[Candidates_data] (
                         [Date], [Recruiter], [Name], [Surname], [Role], 
-                        [MainCountryCode], [MainBaseNumber], [AlternateCountryCode], [AlternateBaseNumber], 
-                        [Email], [NoticePeriod], [CurrentLocation], [Nationality], 
-                        [CurrentRate], [ExpectedRate], [Source], [YearsOfExperience], 
+                        [Main_Country_Code], [Main_Base_Number], [Alternate_Country_Code], [Alternate_Base_Number], 
+                        [Email], [Notice_Period], [Current_Location], [Nationality], 
+                        [Current_Rate], [Expected_Rate], [Source], [Years_Of_Experience], 
                         [Outcome], [Comments], [cvUrl], [CreatedAt]
                     ) VALUES (
                         @Date, @Recruiter, @Name, @Surname, @Role, 
