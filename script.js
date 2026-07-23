@@ -1,35 +1,70 @@
 // --- GLOBAL DECLARED CORE STATE CACHE ---
 let allRecruitsData = [];
 
-// ------------------- SINGLE MAIN ROUTER FUNCTION -------------------
+// ------------------- UNIFIED MAIN ROUTER FUNCTION -------------------
 function showPage(page) {
-  ['dashboard','add','jobs','sources','users'].forEach(p => {
-    const el = document.getElementById('page-'+p); if(el) el.style.display = 'none';
-    const n = document.getElementById('nav-'+p); if(n) n.classList.remove('active');
+  // 1. Hide all page sections
+  const pages = document.querySelectorAll('.content, [id^="page-"]');
+  pages.forEach(p => {
+    if (p.id !== 'page-login') p.style.display = 'none';
   });
-  
-  const target = document.getElementById('page-'+page); if(target) target.style.display = '';
-  const nav = document.getElementById('nav-'+page); if(nav) nav.classList.add('active');
-  
-  const titles = {dashboard:'Dashboard', add:'Add New Recruit', jobs:'Manage Positions', sources:'Manage Sources', users:'Manage Users'};
-  document.getElementById('page-title').textContent = titles[page] || page;
-  
-  // Toggle the search container header using flex layout bounds
+
+  // 2. Remove active state from sidebar navigation links
+  const navLinks = document.querySelectorAll('.nav-item, [id^="nav-"]');
+  navLinks.forEach(n => n.classList.remove('active'));
+
+  // 3. Display target page and activate its nav button
+  const target = document.getElementById(`page-${page}`);
+  if (target) target.style.display = 'block';
+
+  const nav = document.getElementById(`nav-${page}`);
+  if (nav) nav.classList.add('active');
+
+  // 4. Update Header Title
+  const titles = {
+    dashboard: 'Dashboard',
+    add: 'Add New Recruit',
+    jobs: 'Manage Positions',
+    sources: 'Manage Sources',
+    users: 'Manage Users'
+  };
+  const titleEl = document.getElementById('page-title');
+  if (titleEl) titleEl.textContent = titles[page] || page;
+
+  // 5. Toggle Dashboard Search Container Bar
   const sBox = document.getElementById('search-container');
-  if(sBox) sBox.style.display = (page === 'dashboard') ? 'flex' : 'none';
+  if (sBox) sBox.style.display = (page === 'dashboard') ? 'flex' : 'none';
 
-  document.getElementById('form-success').style.display = 'none';
-  document.getElementById('form-err').style.display = 'none';
+  // 6. Clear form alert messages
+  const fSuccess = document.getElementById('form-success');
+  if (fSuccess) fSuccess.style.display = 'none';
+  const fErr = document.getElementById('form-err');
+  if (fErr) fErr.style.display = 'none';
 
+  // --- TRIGGER DATA LOADERS FOR ACTIVE VIEW ---
   if (page === 'dashboard') {
-    const sInput = document.getElementById('recruit-search'); if(sInput) sInput.value = '';
-    const minInput = document.getElementById('filter-min-rate'); if(minInput) minInput.value = '';
-    const maxInput = document.getElementById('filter-max-rate'); if(maxInput) maxInput.value = '';
-    renderTable();
+    const sInput = document.getElementById('recruit-search'); if (sInput) sInput.value = '';
+    const minInput = document.getElementById('filter-min-rate'); if (minInput) minInput.value = '';
+    const maxInput = document.getElementById('filter-max-rate'); if (maxInput) maxInput.value = '';
+    
+    // FETCH RECRUITS FROM AZURE DATABASE & REFRESH TABLE
+    renderTable(); 
+  } 
+  else if (page === 'add') {
+    setDefaultSourcedDate();
+    loadUsers();
+    loadPositions();
+    loadSources();
+  } 
+  else if (page === 'jobs') {
+    loadPositions();
+  } 
+  else if (page === 'sources') {
+    loadSources();
+  } 
+  else if (page === 'users') {
+    loadUsers();
   }
-  if (page === 'jobs') loadPositions();
-  if (page === 'sources') loadSources();
-  if (page === 'users') loadUsers();
 }
 
 // ------------------- DATA INGESTION LOGGER -------------------
