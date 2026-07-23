@@ -289,7 +289,7 @@ async function addItem(type) {
  */
 async function loadSources() {
   try {
-    const response = await fetch('/api/saveSources');
+    const response = await fetch('/api/getSources');
     if (!response.ok) {
       throw new Error(`Failed to fetch sources: ${response.statusText}`);
     }
