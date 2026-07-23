@@ -1,25 +1,54 @@
 const { Connection, Request, TYPES } = require('tedious');
 const { BlobServiceClient } = require('@azure/storage-blob');
 
-const config = {
-    server: process.env.DB_SERVER,
-    authentication: {
+// Parse Azure SQL connection string (consistent with getUsers/getPositions)
+function parseConnectionString(connectionString) {
+    const config = { options: { encrypt: true, trustServerCertificate: false, connectTimeout: 15000 } };
+    if (!connectionString) return config;
+
+    const parts = connectionString.split(';').reduce((acc, current) => {
+        const [key, ...value] = current.split('=');
+        if (key && value.length) {
+            acc[key.trim().toLowerCase()] = value.join('=').trim();
+        }
+        return acc;
+    }, {});
+
+    const rawServer = parts['server'] || parts['data source'] || '';
+    config.server = rawServer.replace(/^tcp:/i, '').split(',')[0];
+
+    config.authentication = {
         type: 'default',
         options: {
-            userName: process.env.DB_USER,
-            password: process.env.DB_PASSWORD
+            userName: parts['user id'] || parts['uid'] || '',
+            password: parts['password'] || parts['pwd'] || ''
         }
-    },
-    options: {
-        database: process.env.DB_NAME,
-        encrypt: true,
-        trustServerCertificate: false
+    };
+
+    config.options.database = parts['initial catalog'] || parts['database'] || '';
+    return config;
+}
+
+// Helper to safely parse YYYYMMDD, YYYY-MM-DD, or ISO strings into a valid Date object
+function parseDateInput(rawDate) {
+    if (!rawDate) return new Date();
+    const str = String(rawDate).trim();
+    
+    // Handle YYYYMMDD format (e.g., "20260723")
+    if (/^\d{8}$/.test(str)) {
+        const y = parseInt(str.substring(0, 4), 10);
+        const m = parseInt(str.substring(4, 6), 10) - 1;
+        const d = parseInt(str.substring(6, 8), 10);
+        return new Date(y, m, d);
     }
-};
+    
+    const parsed = new Date(str);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
+}
 
 module.exports = async function (context, req) {
     try {
-        // 1. Fail immediately if required data fields are completely missing from the frontend request
+        // 1. Fail immediately if required data fields are missing
         if (!req.body || !req.body.name || !req.body.surname || !req.body.email) {
             context.res = {
                 status: 400,
@@ -28,7 +57,7 @@ module.exports = async function (context, req) {
             return;
         }
 
-        // 2. Unpack keys matching your new schema format from the frontend request
+        // 2. Unpack keys from frontend request
         const {
             date,
             recruiter,
@@ -48,12 +77,12 @@ module.exports = async function (context, req) {
             source,
             yearsOfExperience,
             comments,
-            files // Multi-file array from frontend
+            files
         } = req.body;
 
         let uploadedUrls = [];
 
-        // 3. --- AZURE BLOB STORAGE UPLOAD INTEGRATION (MULTIPLE FILES) ---
+        // 3. --- AZURE BLOB STORAGE UPLOAD INTEGRATION ---
         if (files && Array.isArray(files) && files.length > 0) {
             try {
                 const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
@@ -64,10 +93,8 @@ module.exports = async function (context, req) {
 
                 const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
                 const containerClient = blobServiceClient.getContainerClient('cv-uploads');
-                
                 await containerClient.createIfNotExists();
 
-                // Virtual folder path name structure: "Name_Surname"
                 const folderName = `${name.trim()}_${surname.trim()}`;
 
                 for (const file of files) {
@@ -87,16 +114,21 @@ module.exports = async function (context, req) {
                 context.res = { status: 500, body: `Blob Storage Error: ${storageErr.message}` };
                 return;
             }
-        } else {
-            context.res = { status: 400, body: "Missing required supporting file attachment arrays." };
+        }
+
+        const finalUrlString = uploadedUrls.length > 0 ? uploadedUrls.join(', ') : null;
+
+        // 4. --- SQL SERVER DATABASE TRANSACTION ---
+        const connectionString = process.env.SqlConnectionString;
+        if (!connectionString) {
+            context.res = { status: 500, body: "Error: Missing SqlConnectionString environment variable." };
             return;
         }
 
-        const finalUrlString = uploadedUrls.join(', ');
+        const dbConfig = parseConnectionString(connectionString);
 
-        // 4. --- SQL SERVER DATABASE TRANSACTION ---
         return new Promise((resolve) => {
-            const connection = new Connection(config);
+            const connection = new Connection(dbConfig);
 
             connection.on('connect', (err) => {
                 if (err) {
@@ -106,7 +138,6 @@ module.exports = async function (context, req) {
                     return;
                 }
 
-                // Query updated to match your exact new database column format
                 const query = `
                     INSERT INTO [dbo].[Recruits] (
                         [Date], [Recruiter], [Name], [Surname], [Role], 
@@ -125,13 +156,13 @@ module.exports = async function (context, req) {
 
                 const request = new Request(query, (requestErr) => {
                     if (requestErr) {
-                        context.log("SQL execution statement failure in saveRecruit:", requestErr);
+                        context.log("SQL execution failure in saveRecruit:", requestErr);
                         context.res = {
                             status: 500,
                             body: `SQL Write Failure: ${requestErr.message}`
                         };
                     } else {
-                        context.log("Database row successfully written with new schema layout.");
+                        context.log("Database row successfully written.");
                         context.res = {
                             status: 200,
                             headers: { 'Content-Type': 'application/json' },
@@ -142,8 +173,8 @@ module.exports = async function (context, req) {
                     resolve();
                 });
 
-                // Parameter binding matching types accurately down to the database layout
-                request.addParameter('Date', TYPES.Date, date ? new Date(date) : new Date());
+                // Parameter binding matching database types safely
+                request.addParameter('Date', TYPES.Date, parseDateInput(date));
                 request.addParameter('Recruiter', TYPES.NVarChar, recruiter || null);
                 request.addParameter('Name', TYPES.NVarChar, name);
                 request.addParameter('Surname', TYPES.NVarChar, surname);
@@ -156,10 +187,10 @@ module.exports = async function (context, req) {
                 request.addParameter('NoticePeriod', TYPES.NVarChar, noticePeriod || null);
                 request.addParameter('CurrentLocation', TYPES.NVarChar, currentLocation || null);
                 request.addParameter('Nationality', TYPES.NVarChar, nationality || null);
-                request.addParameter('CurrentRate', TYPES.Decimal, currentRate ? parseFloat(currentRate) : null);
-                request.addParameter('ExpectedRate', TYPES.Decimal, expectedRate ? parseFloat(expectedRate) : null);
+                request.addParameter('CurrentRate', TYPES.Decimal, (currentRate !== null && currentRate !== undefined && currentRate !== '') ? parseFloat(currentRate) : null);
+                request.addParameter('ExpectedRate', TYPES.Decimal, (expectedRate !== null && expectedRate !== undefined && expectedRate !== '') ? parseFloat(expectedRate) : null);
                 request.addParameter('Source', TYPES.NVarChar, source || null);
-                request.addParameter('YearsOfExperience', TYPES.Decimal, yearsOfExperience ? parseFloat(yearsOfExperience) : null);
+                request.addParameter('YearsOfExperience', TYPES.Decimal, (yearsOfExperience !== null && yearsOfExperience !== undefined && yearsOfExperience !== '') ? parseFloat(yearsOfExperience) : null);
                 request.addParameter('Comments', TYPES.NVarChar, comments || null);
                 request.addParameter('cvUrl', TYPES.NVarChar, finalUrlString); 
 
