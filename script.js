@@ -306,3 +306,90 @@ async function loadSources() {
 document.addEventListener('DOMContentLoaded', () => {
   loadSources();
 });
+
+async function loadPositions() {
+  const jobSelect = document.getElementById('f-job');
+  const jobsTableBody = document.getElementById('jobs-list');
+
+  try {
+    const response = await fetch('/api/getPositions');
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const positions = await response.json();
+
+    // 1. Populate the dropdown on the "Add Recruit" page
+    if (jobSelect) {
+      jobSelect.innerHTML = '<option value="">— select position —</option>';
+      positions.forEach(pos => {
+        const option = document.createElement('option');
+        option.value = pos.id;
+        option.textContent = pos.title;
+        jobSelect.appendChild(option);
+      });
+    }
+
+    // 2. Populate the table on the "Manage Positions" page
+    if (jobsTableBody) {
+      jobsTableBody.innerHTML = '';
+      if (positions.length === 0) {
+        jobsTableBody.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#888;">No positions found</td></tr>';
+      } else {
+        positions.forEach(pos => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${escapeHtml(pos.title)}</td>
+            <td><span class="badge active" style="background:#e6f4ea; color:#137333; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600;">Active</span></td>
+          `;
+          jobsTableBody.appendChild(row);
+        });
+      }
+    }
+
+  } catch (error) {
+    console.error('Error loading positions:', error);
+    if (jobSelect) {
+      jobSelect.innerHTML = '<option value="">— failed to load positions —</option>';
+    }
+  }
+}
+
+// Utility function to safely display text without XSS vulnerabilities
+function escapeHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, function (m) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+  });
+}
+
+// Automatically load positions when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+  loadPositions();
+});
+
+function showPage(pageId) {
+    // 1. Hide all pages
+    const pages = document.querySelectorAll('.content');
+    pages.forEach(p => p.style.display = 'none');
+
+    // 2. Show the selected page
+    const selectedPage = document.getElementById(`page-${pageId}`);
+    if (selectedPage) {
+        selectedPage.style.display = 'block';
+    }
+
+    // --- ADD STEP 2 HERE ---
+    // Fetch fresh database records whenever these pages open
+    if (pageId === 'add' || pageId === 'jobs') {
+        loadPositions();
+    }
+    if (pageId === 'add' || pageId === 'sources') {
+        loadSources();
+    }
+}
+
+// ALSO ADD IT HERE: Run once when the web page finishes loading
+document.addEventListener('DOMContentLoaded', () => {
+    loadPositions();
+    loadSources();
+});
