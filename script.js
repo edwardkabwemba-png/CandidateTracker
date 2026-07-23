@@ -467,28 +467,6 @@ async function loadUsers() {
   }
 }
 
-function showPage(pageId) {
-  // Hide all pages
-  const pages = document.querySelectorAll('.content');
-  pages.forEach(p => p.style.display = 'none');
-
-  // Show selected page
-  const selectedPage = document.getElementById(`page-${pageId}`);
-  if (selectedPage) {
-    selectedPage.style.display = 'block';
-  }
-
-  // Refresh dynamic database options based on active tab
-  if (pageId === 'add' || pageId === 'users') {
-    loadUsers();
-  }
-  if (pageId === 'add' || pageId === 'jobs') {
-    loadPositions();
-  }
-  if (pageId === 'add' || pageId === 'sources') {
-    loadSources();
-  }
-}
 
 // Initial load on page startup
 document.addEventListener('DOMContentLoaded', () => {
@@ -512,31 +490,7 @@ function setDefaultSourcedDate() {
   dateInput.value = `${year}${month}${day}`;
 }
 
-function showPage(pageId) {
-  // Hide all pages
-  const pages = document.querySelectorAll('.content');
-  pages.forEach(p => p.style.display = 'none');
 
-  // Show selected page
-  const selectedPage = document.getElementById(`page-${pageId}`);
-  if (selectedPage) {
-    selectedPage.style.display = 'block';
-  }
-
-  // Set default date & refresh dropdowns on 'add' page
-  if (pageId === 'add') {
-    setDefaultSourcedDate();
-    loadUsers();
-    loadPositions();
-    loadSources();
-  } else if (pageId === 'users') {
-    loadUsers();
-  } else if (pageId === 'jobs') {
-    loadPositions();
-  } else if (pageId === 'sources') {
-    loadSources();
-  }
-}
 
 // Set default date when application initializes
 document.addEventListener('DOMContentLoaded', () => {
