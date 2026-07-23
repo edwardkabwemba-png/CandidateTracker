@@ -546,10 +546,23 @@ async function submitForm(event) {
     if (fSuccess) fSuccess.style.display = 'none';
     if (fErr) fErr.style.display = 'none';
 
-    // Helper to safely extract input values
+    // Helper to safely extract input values for standard text inputs
     const getVal = (id) => {
         const el = document.getElementById(id);
         return el ? el.value.trim() : '';
+    };
+
+    // Helper to safely get the selected text from a <select> dropdown instead of its value
+    const getText = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return '';
+        if (el.tagName === 'SELECT' && el.selectedIndex !== -1) {
+            const text = el.options[el.selectedIndex].text.trim();
+            // Ignore default placeholder options like "— select recruiter —"
+            if (text.startsWith('—') || text.startsWith('--') || text.toLowerCase().includes('select')) return '';
+            return text;
+        }
+        return el.value ? el.value.trim() : '';
     };
 
     // 1. Convert uploaded files to base64 array matching the backend expectation
@@ -572,23 +585,27 @@ async function submitForm(event) {
 
     // 2. Map payload keys to match backend expected parameters
     const candidateData = {
-        date: getVal('f-date') || getVal('sourced-date'),
-        recruiter: getSelectedText('candidate-recruiter') || getSelectedText('recruiter'),
+        date: getVal('f-date') || getVal('sourced-date') || getVal('date-sourced'),
+        
+        // ALL DROPDOWNS NOW USE getText():
+        recruiter: getText('f-recruiter') || getText('recruiter') || getText('candidate-recruiter'),
+        role: getText('f-job') || getText('recruit-position') || getText('candidate-position'),
+        noticePeriod: getText('f-notice') || getText('notice-period'),
+        outcome: getText('outcome') || getText('candidate-outcome') || getText('recruit-outcome'),
+        source: getText('f-source') || getText('source') || getText('candidate-source'),
+        
+        // REGULAR INPUTS USE getVal():
         name: getVal('f-fname') || getVal('first-name'),
         surname: getVal('f-lname') || getVal('surname'),
-        role: getVal('f-job') || getVal('recruit-position'),
         mainCountryCode: getVal('f-main-code') || getVal('phone-country') || '+27',
         mainBaseNumber: getVal('f-main-phone') || getVal('contact-number'),
         alternateCountryCode: getVal('f-alt-code') || getVal('alt-phone-country'),
         alternateBaseNumber: getVal('f-alt-phone') || getVal('alt-contact-number'),
         email: getVal('f-email') || getVal('candidate-email'),
-        noticePeriod: getVal('f-notice') || getVal('notice-period'),
         currentLocation: getVal('f-location') || getVal('current-location'),
         nationality: getVal('f-nationality') || getVal('nationality'),
         currentRate: getVal('f-crate') || getVal('current-rate'),
         expectedRate: getVal('f-erate') || getVal('expected-rate'),
-        outcome: getVal('outcome') || getVal('candidate-outcome') || getVal('recruit-outcome'),
-        source: getVal('f-source') || getVal('source'),
         yearsOfExperience: getVal('f-yoe') || getVal('years-experience'),
         comments: getVal('f-comments') || getVal('comments'),
         files: filesArray
