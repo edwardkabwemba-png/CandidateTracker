@@ -411,26 +411,6 @@ document.addEventListener('DOMContentLoaded', () => {
   loadPositions();
 });
 
-function showPage(pageId) {
-    // 1. Hide all pages
-    const pages = document.querySelectorAll('.content');
-    pages.forEach(p => p.style.display = 'none');
-
-    // 2. Show the selected page
-    const selectedPage = document.getElementById(`page-${pageId}`);
-    if (selectedPage) {
-        selectedPage.style.display = 'block';
-    }
-
-    // --- ADD STEP 2 HERE ---
-    // Fetch fresh database records whenever these pages open
-    if (pageId === 'add' || pageId === 'jobs') {
-        loadPositions();
-    }
-    if (pageId === 'add' || pageId === 'sources') {
-        loadSources();
-    }
-}
 
 // ALSO ADD IT HERE: Run once when the web page finishes loading
 document.addEventListener('DOMContentLoaded', () => {
