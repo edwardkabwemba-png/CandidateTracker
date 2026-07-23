@@ -393,3 +393,82 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPositions();
     loadSources();
 });
+
+async function loadUsers() {
+  const recruiterSelect = document.getElementById('f-recruiter');
+  const usersTableBody = document.getElementById('users-list');
+
+  try {
+    const response = await fetch('/api/getUsers');
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const users = await response.json();
+
+    // 1. Populate the Recruiter dropdown (<select id="f-recruiter">)
+    if (recruiterSelect) {
+      recruiterSelect.innerHTML = '<option value="">— select recruiter —</option>';
+      users.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = user.name;
+        recruiterSelect.appendChild(option);
+      });
+    }
+
+    // 2. Populate the Manage Users table (<tbody id="users-list">)
+    if (usersTableBody) {
+      usersTableBody.innerHTML = '';
+      if (users.length === 0) {
+        usersTableBody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#888;">No users found</td></tr>';
+      } else {
+        users.forEach(user => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${escapeHtml(user.name)}</td>
+            <td>${escapeHtml(user.email)}</td>
+            <td><span class="avatar-badge" style="background:#e8f0fe; color:var(--rt-navy); padding:2px 8px; border-radius:4px; font-weight:600; font-size:12px;">${escapeHtml(user.avatar)}</span></td>
+          `;
+          usersTableBody.appendChild(row);
+        });
+      }
+    }
+
+  } catch (error) {
+    console.error('Error loading users:', error);
+    if (recruiterSelect) {
+      recruiterSelect.innerHTML = '<option value="">— failed to load recruiters —</option>';
+    }
+  }
+}
+
+function showPage(pageId) {
+  // Hide all pages
+  const pages = document.querySelectorAll('.content');
+  pages.forEach(p => p.style.display = 'none');
+
+  // Show selected page
+  const selectedPage = document.getElementById(`page-${pageId}`);
+  if (selectedPage) {
+    selectedPage.style.display = 'block';
+  }
+
+  // Refresh dynamic database options based on active tab
+  if (pageId === 'add' || pageId === 'users') {
+    loadUsers();
+  }
+  if (pageId === 'add' || pageId === 'jobs') {
+    loadPositions();
+  }
+  if (pageId === 'add' || pageId === 'sources') {
+    loadSources();
+  }
+}
+
+// Initial load on page startup
+document.addEventListener('DOMContentLoaded', () => {
+  loadUsers();
+  loadPositions();
+  loadSources();
+});
