@@ -472,3 +472,61 @@ document.addEventListener('DOMContentLoaded', () => {
   loadPositions();
   loadSources();
 });
+
+function setDefaultSourcedDate() {
+  const dateInput = document.getElementById('f-date');
+  if (!dateInput) return;
+
+  // Get current date
+  const today = new Date();
+  const year = today.getFullYear();
+  // Pad month and day with leading zeros if under 10
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+
+  // Set the field value to YYYYMMDD
+  dateInput.value = `${year}${month}${day}`;
+}
+
+function showPage(pageId) {
+  // Hide all pages
+  const pages = document.querySelectorAll('.content');
+  pages.forEach(p => p.style.display = 'none');
+
+  // Show selected page
+  const selectedPage = document.getElementById(`page-${pageId}`);
+  if (selectedPage) {
+    selectedPage.style.display = 'block';
+  }
+
+  // Set default date & refresh dropdowns on 'add' page
+  if (pageId === 'add') {
+    setDefaultSourcedDate();
+    loadUsers();
+    loadPositions();
+    loadSources();
+  } else if (pageId === 'users') {
+    loadUsers();
+  } else if (pageId === 'jobs') {
+    loadPositions();
+  } else if (pageId === 'sources') {
+    loadSources();
+  }
+}
+
+// Set default date when application initializes
+document.addEventListener('DOMContentLoaded', () => {
+  setDefaultSourcedDate();
+  loadUsers();
+  loadPositions();
+  loadSources();
+});
+
+function clearForm() {
+  // Clear other inputs...
+  document.getElementById('f-fname').value = '';
+  document.getElementById('f-lname').value = '';
+  
+  // Reset date back to today
+  setDefaultSourcedDate();
+}
