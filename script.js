@@ -580,6 +580,7 @@ async function submitForm(event) {
         nationality: getVal('f-nationality') || getVal('nationality'),
         currentRate: getVal('f-crate') || getVal('current-rate'),
         expectedRate: getVal('f-erate') || getVal('expected-rate'),
+        outcome: getVal('outcome') || getVal('candidate-outcome') || getVal('recruit-outcome'),
         source: getVal('f-source') || getVal('source'),
         yearsOfExperience: getVal('f-yoe') || getVal('years-experience'),
         comments: getVal('f-comments') || getVal('comments'),
