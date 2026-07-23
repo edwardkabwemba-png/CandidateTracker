@@ -529,69 +529,127 @@ function updateCharCount(textarea) {
     }
 }
 
-// 3. Submit New Candidate Form to API
 async function submitForm(event) {
-    if (event) event.preventDefault(); // Prevent standard browser form submission
+    if (event) event.preventDefault();
+    console.log("Submitting form to /api/saveRecruit...");
 
     const fSuccess = document.getElementById('form-success');
     const fErr = document.getElementById('form-err');
     
-    // Hide previous banners
     if (fSuccess) fSuccess.style.display = 'none';
     if (fErr) fErr.style.display = 'none';
 
-    // Gather input values from the Add Candidate form
-    const candidateData = {
-        name: document.getElementById('candidate-name')?.value.trim(),
-        email: document.getElementById('candidate-email')?.value.trim(),
-        phone: document.getElementById('phone-number')?.value.trim(),
-        position_id: document.getElementById('candidate-position')?.value,
-        source_id: document.getElementById('candidate-source')?.value,
-        recruiter_id: document.getElementById('candidate-recruiter')?.value,
-        sourced_date: document.getElementById('sourced-date')?.value,
-        rate: document.getElementById('candidate-rate')?.value,
-        notes: document.getElementById('candidate-notes')?.value.trim()
+    // Helper to safely extract input values
+    const getVal = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.value.trim() : '';
     };
 
-    // Simple client-side validation
-    if (!candidateData.name || !candidateData.position_id) {
-        if (fErr) {
-            fErr.textContent = "Please fill in all required fields (Name and Position).";
-            fErr.style.display = 'block';
+    // 1. Convert uploaded files to base64 array matching the backend expectation
+    const fileInput = document.getElementById('supporting-files') || document.getElementById('f-files');
+    let filesArray = [];
+
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        for (const file of fileInput.files) {
+            try {
+                const base64Data = await convertFileToBase64(file);
+                filesArray.push({
+                    fileName: file.name,
+                    base64: base64Data
+                });
+            } catch (fileErr) {
+                console.error("Error reading file:", file.name, fileErr);
+            }
         }
+    }
+
+    // 2. Map payload keys to match backend expected parameters
+    const candidateData = {
+        date: getVal('f-date') || getVal('sourced-date'),
+        recruiter: getVal('f-recruiter') || getVal('recruiter'),
+        name: getVal('f-fname') || getVal('first-name'),
+        surname: getVal('f-lname') || getVal('surname'),
+        role: getVal('f-job') || getVal('recruit-position'),
+        mainCountryCode: getVal('f-main-code') || getVal('phone-country') || '+27',
+        mainBaseNumber: getVal('f-main-phone') || getVal('contact-number'),
+        alternateCountryCode: getVal('f-alt-code') || getVal('alt-phone-country'),
+        alternateBaseNumber: getVal('f-alt-phone') || getVal('alt-contact-number'),
+        email: getVal('f-email') || getVal('candidate-email'),
+        noticePeriod: getVal('f-notice') || getVal('notice-period'),
+        currentLocation: getVal('f-location') || getVal('current-location'),
+        nationality: getVal('f-nationality') || getVal('nationality'),
+        currentRate: getVal('f-crate') || getVal('current-rate'),
+        expectedRate: getVal('f-erate') || getVal('expected-rate'),
+        source: getVal('f-source') || getVal('source'),
+        yearsOfExperience: getVal('f-yoe') || getVal('years-experience'),
+        comments: getVal('f-comments') || getVal('comments'),
+        files: filesArray
+    };
+
+    console.log("Payload sending to /api/saveRecruit:", candidateData);
+
+    // Validation checks required by backend
+    if (!candidateData.name || !candidateData.surname || !candidateData.email) {
+        showFormError("Missing required profile fields (First Name, Surname, or Email).");
         return;
     }
 
     try {
-        const response = await fetch('/api/addCandidate', {
+        const response = await fetch('/api/saveRecruit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(candidateData)
         });
 
         if (!response.ok) {
-            const errData = await response.json();
-            throw new Error(errData.message || 'Failed to add candidate to database.');
+            const errText = await response.text();
+            throw new Error(errText || `Server error: ${response.status}`);
         }
 
-        // Success!
+        const resData = await response.json().catch(() => ({}));
+        console.log("Save success response:", resData);
+
         if (fSuccess) {
-            fSuccess.textContent = "Candidate successfully added!";
+            fSuccess.textContent = "Recruit successfully saved to database!";
             fSuccess.style.display = 'block';
         }
 
-        // Clear inputs after success
-        const addForm = document.getElementById('add-candidate-form');
-        if (addForm) addForm.reset();
+        // Reset the form after save
+        if (typeof clearForm === 'function') {
+            clearForm();
+        } else {
+            const form = document.querySelector('form');
+            if (form) form.reset();
+        }
 
-        // Refresh the main table dataset in the background
-        if (typeof renderTable === 'function') renderTable();
+        // Refresh main table
+        if (typeof renderTable === 'function') {
+            await renderTable();
+        }
 
     } catch (error) {
-        console.error("Error adding candidate:", error);
-        if (fErr) {
-            fErr.textContent = error.message;
-            fErr.style.display = 'block';
-        }
+        console.error("Error in saveRecruit request:", error);
+        showFormError(error.message);
+    }
+}
+
+// Helper: Convert file to Base64
+function convertFileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+
+// Helper: Error display
+function showFormError(msg) {
+    const fErr = document.getElementById('form-err');
+    if (fErr) {
+        fErr.textContent = msg;
+        fErr.style.display = 'block';
+    } else {
+        alert(msg);
     }
 }

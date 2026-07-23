@@ -1,7 +1,7 @@
 const { Connection, Request, TYPES } = require('tedious');
 const { BlobServiceClient } = require('@azure/storage-blob');
 
-// Parse Azure SQL connection string (consistent with getUsers/getPositions)
+// Parse Azure SQL connection string
 function parseConnectionString(connectionString) {
     const config = { options: { encrypt: true, trustServerCertificate: false, connectTimeout: 15000 } };
     if (!connectionString) return config;
@@ -34,7 +34,6 @@ function parseDateInput(rawDate) {
     if (!rawDate) return new Date();
     const str = String(rawDate).trim();
     
-    // Handle YYYYMMDD format (e.g., "20260723")
     if (/^\d{8}$/.test(str)) {
         const y = parseInt(str.substring(0, 4), 10);
         const m = parseInt(str.substring(4, 6), 10) - 1;
@@ -76,6 +75,7 @@ module.exports = async function (context, req) {
             expectedRate,
             source,
             yearsOfExperience,
+            outcome, // <-- ADDED OUTCOME FROM FRONTEND
             comments,
             files
         } = req.body;
@@ -138,19 +138,20 @@ module.exports = async function (context, req) {
                     return;
                 }
 
+                // ADDED [Outcome] COLUMN AND PARAMETER TO INSERT STATEMENT
                 const query = `
                     INSERT INTO [dbo].[Recruits] (
                         [Date], [Recruiter], [Name], [Surname], [Role], 
                         [MainCountryCode], [MainBaseNumber], [AlternateCountryCode], [AlternateBaseNumber], 
                         [Email], [NoticePeriod], [CurrentLocation], [Nationality], 
                         [CurrentRate], [ExpectedRate], [Source], [YearsOfExperience], 
-                        [Comments], [cvUrl], [CreatedAt]
+                        [Outcome], [Comments], [cvUrl], [CreatedAt]
                     ) VALUES (
                         @Date, @Recruiter, @Name, @Surname, @Role, 
                         @MainCountryCode, @MainBaseNumber, @AlternateCountryCode, @AlternateBaseNumber, 
                         @Email, @NoticePeriod, @CurrentLocation, @Nationality, 
                         @CurrentRate, @ExpectedRate, @Source, @YearsOfExperience, 
-                        @Comments, @cvUrl, GETDATE()
+                        @Outcome, @Comments, @cvUrl, GETDATE()
                     )
                 `;
 
@@ -187,10 +188,17 @@ module.exports = async function (context, req) {
                 request.addParameter('NoticePeriod', TYPES.NVarChar, noticePeriod || null);
                 request.addParameter('CurrentLocation', TYPES.NVarChar, currentLocation || null);
                 request.addParameter('Nationality', TYPES.NVarChar, nationality || null);
-                request.addParameter('CurrentRate', TYPES.Decimal, (currentRate !== null && currentRate !== undefined && currentRate !== '') ? parseFloat(currentRate) : null);
-                request.addParameter('ExpectedRate', TYPES.Decimal, (expectedRate !== null && expectedRate !== undefined && expectedRate !== '') ? parseFloat(expectedRate) : null);
+
+                // Safe Decimal conversions with precision options
+                const parseNum = (val) => (val !== null && val !== undefined && val !== '') ? parseFloat(val) : null;
+                
+                request.addParameter('CurrentRate', TYPES.Decimal, parseNum(currentRate), { precision: 18, scale: 2 });
+                request.addParameter('ExpectedRate', TYPES.Decimal, parseNum(expectedRate), { precision: 18, scale: 2 });
                 request.addParameter('Source', TYPES.NVarChar, source || null);
-                request.addParameter('YearsOfExperience', TYPES.Decimal, (yearsOfExperience !== null && yearsOfExperience !== undefined && yearsOfExperience !== '') ? parseFloat(yearsOfExperience) : null);
+                request.addParameter('YearsOfExperience', TYPES.Decimal, parseNum(yearsOfExperience), { precision: 5, scale: 1 });
+                
+                // Bind Outcome & Comments
+                request.addParameter('Outcome', TYPES.NVarChar, outcome || null);
                 request.addParameter('Comments', TYPES.NVarChar, comments || null);
                 request.addParameter('cvUrl', TYPES.NVarChar, finalUrlString); 
 
