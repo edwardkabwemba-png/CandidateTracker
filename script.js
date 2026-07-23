@@ -145,7 +145,7 @@ function filterRecruitsBySearch() {
 }
 
 // ------------------- AUTHENTICATION CONTROLLER SYSTEM -------------------
-function doLogin() {
+async function doLogin() {
     const email = document.getElementById('login-email').value.trim();
     const pass = document.getElementById('login-pass').value;
     const errBanner = document.getElementById('login-err');
@@ -156,33 +156,42 @@ function doLogin() {
         return; 
     }
     
-    fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, password: pass })
-    })
-    .then(response => {
+    try {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, password: pass })
+        });
+
         if (response.status === 401) throw new Error('Invalid user credentials.');
         if (!response.ok) throw new Error('Database server connection issue.');
-        return response.json();
-    })
-    .then(data => {
+
+        const data = await response.json();
+
+        // 1. Update UI layout displays
         errBanner.style.display = 'none';
         document.getElementById('page-login').style.display = 'none';
         document.getElementById('sidebar').style.display = 'flex';
         document.getElementById('topbar').style.display = 'flex';
         
-        // Extract parameters safely from JSON configuration response
         document.getElementById('user-name').textContent = data.name || 'Recruiter';
         document.getElementById('user-avatar').textContent = data.avatar || 'U';
         
+        // 2. Clear dashboard filter inputs to avoid zero-match filtering
+        const sInput = document.getElementById('recruit-search'); if (sInput) sInput.value = '';
+        const minInput = document.getElementById('filter-min-rate'); if (minInput) minInput.value = '';
+        const maxInput = document.getElementById('filter-max-rate'); if (maxInput) maxInput.value = '';
+
+        // 3. Navigate to dashboard and FORCE-AWAIT the table fetch
         showPage('dashboard');
+        await renderTable();
+
         if (typeof populateFormDropdowns === 'function') populateFormDropdowns();
-    })
-    .catch(error => {
+
+    } catch (error) {
         errBanner.textContent = error.message;
         errBanner.style.display = '';
-    });
+    }
 }
 
 function entralogin() {
