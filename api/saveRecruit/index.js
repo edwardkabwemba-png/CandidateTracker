@@ -116,7 +116,10 @@ module.exports = async function (context, req) {
             }
         }
 
-        const finalUrlString = uploadedUrls.length > 0 ? uploadedUrls.join(', ') : null;
+        // Set fallback text if no files were uploaded
+const finalUrlString = uploadedUrls.length > 0 
+    ? uploadedUrls.join(', ') 
+    : 'No Supporting documents';
 
         // 4. --- SQL SERVER DATABASE TRANSACTION ---
         const connectionString = process.env.SqlConnectionString;
