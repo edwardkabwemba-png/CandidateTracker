@@ -82,52 +82,60 @@ module.exports = async function (context, req) {
 
         let uploadedUrls = [];
 
-        // 3. --- AZURE BLOB STORAGE FILE UPLOAD LOGIC ---
-        // 3. --- AZURE BLOB STORAGE FILE UPLOAD LOGIC ---
+  // 3. --- AZURE BLOB STORAGE FILE UPLOAD LOGIC ---
         if (files && Array.isArray(files) && files.length > 0) {
             try {
-                const blobConnStr = process.env.AZURE_STORAGE_CONNECTION_STRING;
+                // Check both common connection string variable names
+                const blobConnStr = process.env.AZURE_STORAGE_CONNECTION_STRING || process.env.AzureWebJobsStorage;
                 
                 if (!blobConnStr) {
-                    context.log("ERROR: AZURE_STORAGE_CONNECTION_STRING is missing in Azure Function App Settings!");
-                } else {
-                    const blobServiceClient = BlobServiceClient.fromConnectionString(blobConnStr);
-                    const containerClient = blobServiceClient.getContainerClient('cv-uploads');
-                    
-                    // Create container if it does not exist
-                    await containerClient.createIfNotExists();
+                    context.log("ERROR: AZURE_STORAGE_CONNECTION_STRING is missing!");
+                    // Output error directly so it's visible in devtools network tab
+                    context.res = { status: 500, body: "Error: Missing AZURE_STORAGE_CONNECTION_STRING setting in Azure." };
+                    return;
+                }
 
-                    const folderName = `${(name || 'candidate').trim()}_${(surname || 'file').trim()}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+                const blobServiceClient = BlobServiceClient.fromConnectionString(blobConnStr);
+                const containerClient = blobServiceClient.getContainerClient('cv-uploads');
+                
+                // Ensure container exists
+                await containerClient.createIfNotExists();
 
-                    for (const file of files) {
-                        // Accept base64, data, content, or string payload formats
-                        const rawBase64 = file.base64 || file.data || file.content || (typeof file === 'string' ? file : null);
-                        const fileName = file.fileName || file.name || `document_${Date.now()}.pdf`;
+                const folderName = `${(name || 'candidate').trim()}_${(surname || 'file').trim()}`.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-                        if (rawBase64) {
-                            // Strip Data URI scheme if present (e.g. data:application/pdf;base64,)
-                            const cleanBase64 = rawBase64.includes(',') 
-                                ? rawBase64.split(',')[1] 
-                                : rawBase64;
-                                
-                            const fileBuffer = Buffer.from(cleanBase64, 'base64');
-                            const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
-                            const uniqueBlobPath = `${folderName}/${Date.now()}-${sanitizedFileName}`;
-                            
-                            const blockBlobClient = containerClient.getBlockBlobClient(uniqueBlobPath);
-                            
-                            // Upload buffer to Azure Blob Storage
-                            await blockBlobClient.upload(fileBuffer, fileBuffer.length);
-                            
-                            context.log(`Successfully uploaded blob: ${blockBlobClient.url}`);
-                            uploadedUrls.push(blockBlobClient.url);
-                        } else {
-                            context.log("WARNING: File object was present in request payload but contained no base64 string.", file);
+                for (const file of files) {
+                    const rawBase64 = file.base64 || file.data || file.content;
+                    const fileName = file.fileName || file.name || `document_${Date.now()}.pdf`;
+
+                    if (rawBase64) {
+                        // EXPLICIT CLEANUP: Split on comma to get pure Base64 string
+                        let pureBase64 = rawBase64;
+                        if (pureBase64.includes(',')) {
+                            pureBase64 = pureBase64.split(',')[1];
                         }
+
+                        // Remove any whitespace/newlines
+                        pureBase64 = pureBase64.trim().replace(/[\r\n\s]/g, '');
+
+                        const fileBuffer = Buffer.from(pureBase64, 'base64');
+                        const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+                        const uniqueBlobPath = `${folderName}/${Date.now()}-${sanitizedFileName}`;
+                        
+                        const blockBlobClient = containerClient.getBlockBlobClient(uniqueBlobPath);
+                        
+                        // Use uploadData which natively handles Node Buffers reliably
+                        await blockBlobClient.uploadData(fileBuffer);
+                        
+                        uploadedUrls.push(blockBlobClient.url);
                     }
                 }
             } catch (storageErr) {
                 context.log("CRITICAL BLOB STORAGE UPLOAD ERROR:", storageErr.stack || storageErr.message);
+                context.res = { 
+                    status: 500, 
+                    body: `Blob Storage Upload Failed: ${storageErr.message}` 
+                };
+                return;
             }
         }
 
