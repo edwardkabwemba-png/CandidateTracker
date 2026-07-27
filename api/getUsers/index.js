@@ -1,34 +1,39 @@
-// Helper to check if the current requester is an authorized admin
+// Whitelisted emails (always store in lowercase without spaces)
 const ALLOWED_ADMINS = [
-    'edward.kabwemba@frostbytedigital.co.za', 
+    'edward@yourcompany.com',
     'admin@yourcompany.com'
 ];
 
-function isUserAuthorized(req) {
-    // 1. Check App Service / Entra ID header (if authentication is enabled on Azure)
-    const headerUser = req.headers['x-ms-client-principal-name'];
-    if (headerUser && ALLOWED_ADMINS.includes(headerUser.toLowerCase())) {
-        return true;
-    }
+function isUserAdmin(rawInput) {
+    if (!rawInput) return false;
 
-    // 2. Check email passed in request body or headers
-    const reqUser = req.body?.currentUserEmail || req.headers['x-user-email'];
-    if (reqUser && ALLOWED_ADMINS.includes(String(reqUser).toLowerCase())) {
-        return true;
-    }
+    // 1. Convert to string, strip whitespace/newlines, and convert to lowercase
+    const cleanInput = String(rawInput)
+        .trim()
+        .toLowerCase()
+        .replace(/[\r\n\t]/g, '');
 
-    return false;
+    // 2. Safely compare against normalized list
+    return ALLOWED_ADMINS.map(email => email.trim().toLowerCase()).includes(cleanInput);
 }
 
-// Add this block at the very top of your User Admin functions:
-module.exports = async function (context, req) {
-    if (!isUserAuthorized(req)) {
-        context.res = {
-            status: 403,
-            body: "Access Denied: You do not have permission to manage users."
-        };
-        return;
+// Usage Example inside your script:
+function applyRoleBasedAccessControl() {
+    const userEmail = localStorage.getItem('userEmail') || 
+                      document.getElementById('user-email-input')?.value || 
+                      '';
+
+    const manageUsersNav = document.getElementById('nav-manage-users') || 
+                           document.getElementById('manage-users');
+
+    if (manageUsersNav) {
+        if (!isUserAdmin(userEmail)) {
+            manageUsersNav.style.display = 'none';
+        } else {
+            manageUsersNav.style.display = '';
+        }
     }
+
 
     // ... rest of your user administration code ...
 
