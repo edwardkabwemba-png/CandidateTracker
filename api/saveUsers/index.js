@@ -31,7 +31,7 @@ module.exports = async function (context, req) {
     }
 
     // ... rest of your user administration code ...
-};
+
 
 
 const { Connection, Request, TYPES } = require('tedious');
@@ -181,3 +181,4 @@ function saveUserToDatabase(connectionString, email, passwordHash, fullName, ini
         connection.connect();
     });
 }
+};

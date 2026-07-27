@@ -31,7 +31,7 @@ module.exports = async function (context, req) {
     }
 
     // ... rest of your user administration code ...
-};
+
 
 const { Connection, Request } = require('tedious');
 
@@ -131,4 +131,5 @@ module.exports = async function (context, req) {
 
         connection.connect();
     });
+};
 };
