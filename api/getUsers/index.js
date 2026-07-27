@@ -1,37 +1,34 @@
-// Whitelisted emails (always store in lowercase without spaces)
 const ALLOWED_ADMINS = [
-    'edward@yourcompany.com',
+    'edward.kabwemba@frostbytedigital.co.za',
     'admin@yourcompany.com'
 ];
 
-function isUserAdmin(rawInput) {
-    if (!rawInput) return false;
+function checkBackendAuthorization(req, context) {
+    // Read raw email from headers or body
+    const rawEmail = req.headers['x-ms-client-principal-name'] || 
+                     req.headers['x-user-email'] || 
+                     req.body?.currentUserEmail || 
+                     '';
 
-    // 1. Convert to string, strip whitespace/newlines, and convert to lowercase
-    const cleanInput = String(rawInput)
+    // Normalize input: trim, lowercase, strip whitespace
+    const cleanEmail = String(rawEmail)
         .trim()
         .toLowerCase()
         .replace(/[\r\n\t]/g, '');
 
-    // 2. Safely compare against normalized list
-    return ALLOWED_ADMINS.map(email => email.trim().toLowerCase()).includes(cleanInput);
+    const normalizedAdmins = ALLOWED_ADMINS.map(e => e.trim().toLowerCase());
+
+    return normalizedAdmins.includes(cleanEmail);
 }
 
-// Usage Example inside your script:
-function applyRoleBasedAccessControl() {
-    const userEmail = localStorage.getItem('userEmail') || 
-                      document.getElementById('user-email-input')?.value || 
-                      '';
-
-    const manageUsersNav = document.getElementById('nav-manage-users') || 
-                           document.getElementById('manage-users');
-
-    if (manageUsersNav) {
-        if (!isUserAdmin(userEmail)) {
-            manageUsersNav.style.display = 'none';
-        } else {
-            manageUsersNav.style.display = '';
-        }
+// Top of your function handler:
+module.exports = async function (context, req) {
+    if (!checkBackendAuthorization(req, context)) {
+        context.res = {
+            status: 403,
+            body: "Forbidden: You are not authorized to manage users."
+        };
+        return;
     }
 
 

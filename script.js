@@ -1,31 +1,39 @@
 // --- GLOBAL DECLARED CORE STATE CACHE ---
 let allRecruitsData = [];
 
-// List of authorized admin emails
+// Whitelisted emails (always store in lowercase without spaces)
 const ALLOWED_ADMINS = [
-    'edward.kabwemba@frostbytedigital.co.za',
+    'edward@yourcompany.com',
     'admin@yourcompany.com'
 ];
 
-function applyRoleBasedAccessControl(currentUserEmail) {
-    const isAllowed = ALLOWED_ADMINS.includes(currentUserEmail.toLowerCase());
-    
-    // Select your Manage Users tab/button (update the ID to match your HTML)
+function isUserAdmin(rawInput) {
+    if (!rawInput) return false;
+
+    // 1. Convert to string, strip whitespace/newlines, and convert to lowercase
+    const cleanInput = String(rawInput)
+        .trim()
+        .toLowerCase()
+        .replace(/[\r\n\t]/g, '');
+
+    // 2. Safely compare against normalized list
+    return ALLOWED_ADMINS.map(email => email.trim().toLowerCase()).includes(cleanInput);
+}
+
+// Usage Example inside your script:
+function applyRoleBasedAccessControl() {
+    const userEmail = localStorage.getItem('userEmail') || 
+                      document.getElementById('user-email-input')?.value || 
+                      '';
+
     const manageUsersNav = document.getElementById('nav-manage-users') || 
-                           document.getElementById('manage-users-tab') ||
-                           document.querySelector('[data-tab="manage-users"]');
+                           document.getElementById('manage-users');
 
     if (manageUsersNav) {
-        if (!isAllowed) {
-            // Option A: Hide completely
+        if (!isUserAdmin(userEmail)) {
             manageUsersNav.style.display = 'none';
-
-            // Option B (Alternative): Keep visible but disable clicks
-            // manageUsersNav.classList.add('disabled');
-            // manageUsersNav.style.pointerEvents = 'none';
-            // manageUsersNav.style.opacity = '0.5';
         } else {
-            manageUsersNav.style.display = 'block';
+            manageUsersNav.style.display = '';
         }
     }
 }
