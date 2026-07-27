@@ -83,41 +83,51 @@ module.exports = async function (context, req) {
         let uploadedUrls = [];
 
         // 3. --- AZURE BLOB STORAGE FILE UPLOAD LOGIC ---
+        // 3. --- AZURE BLOB STORAGE FILE UPLOAD LOGIC ---
         if (files && Array.isArray(files) && files.length > 0) {
             try {
                 const blobConnStr = process.env.AZURE_STORAGE_CONNECTION_STRING;
+                
                 if (!blobConnStr) {
-                    context.log("Warning: AZURE_STORAGE_CONNECTION_STRING setting is missing in App Settings.");
+                    context.log("ERROR: AZURE_STORAGE_CONNECTION_STRING is missing in Azure Function App Settings!");
                 } else {
                     const blobServiceClient = BlobServiceClient.fromConnectionString(blobConnStr);
                     const containerClient = blobServiceClient.getContainerClient('cv-uploads');
                     
-                    // Ensure container exists
+                    // Create container if it does not exist
                     await containerClient.createIfNotExists();
 
-                    // Sanitize folder name based on candidate name
-                    const folderName = `${name.trim()}_${surname.trim()}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+                    const folderName = `${(name || 'candidate').trim()}_${(surname || 'file').trim()}`.replace(/[^a-zA-Z0-9_-]/g, '_');
 
                     for (const file of files) {
-                        if (file && file.base64 && file.fileName) {
-                            // Strip Base64 Data URI header if present (e.g., "data:application/pdf;base64,")
-                            const cleanBase64 = file.base64.includes(',') 
-                                ? file.base64.split(',')[1] 
-                                : file.base64;
+                        // Accept base64, data, content, or string payload formats
+                        const rawBase64 = file.base64 || file.data || file.content || (typeof file === 'string' ? file : null);
+                        const fileName = file.fileName || file.name || `document_${Date.now()}.pdf`;
+
+                        if (rawBase64) {
+                            // Strip Data URI scheme if present (e.g. data:application/pdf;base64,)
+                            const cleanBase64 = rawBase64.includes(',') 
+                                ? rawBase64.split(',')[1] 
+                                : rawBase64;
                                 
                             const fileBuffer = Buffer.from(cleanBase64, 'base64');
-                            const uniqueFileName = `${folderName}/${Date.now()}-${file.fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+                            const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+                            const uniqueBlobPath = `${folderName}/${Date.now()}-${sanitizedFileName}`;
                             
-                            const blockBlobClient = containerClient.getBlockBlobClient(uniqueFileName);
+                            const blockBlobClient = containerClient.getBlockBlobClient(uniqueBlobPath);
                             
+                            // Upload buffer to Azure Blob Storage
                             await blockBlobClient.upload(fileBuffer, fileBuffer.length);
+                            
+                            context.log(`Successfully uploaded blob: ${blockBlobClient.url}`);
                             uploadedUrls.push(blockBlobClient.url);
+                        } else {
+                            context.log("WARNING: File object was present in request payload but contained no base64 string.", file);
                         }
                     }
                 }
             } catch (storageErr) {
-                context.log("Blob Storage Upload Exception:", storageErr.message);
-                // Non-fatal catch: allows SQL row creation to complete even if Blob upload encounters issues
+                context.log("CRITICAL BLOB STORAGE UPLOAD ERROR:", storageErr.stack || storageErr.message);
             }
         }
 
