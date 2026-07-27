@@ -1,4 +1,4 @@
-const { Connection, Request } = require('tedious');
+const { Connection, Request, TYPES } = require('tedious'); // Added TYPES here
 
 // Helper to parse ADO.NET connection string into Tedious config
 function parseConnectionString(connectionString) {
@@ -15,6 +15,9 @@ function parseConnectionString(connectionString) {
 
     const rawServer = parts['server'] || parts['data source'] || '';
     config.server = rawServer.replace(/^tcp:/i, '').split(',')[0];
+    
+    // Extracted database name so tedious knows which DB to target
+    config.options.database = parts['initial catalog'] || parts['database'] || process.env.DB_NAME;
 
     config.authentication = {
         type: 'default',
@@ -23,6 +26,9 @@ function parseConnectionString(connectionString) {
             password: parts['password'] || parts['pwd'] || ''
         }
     };
+
+    return config;
+} // <-- Missing closing brace added here
 
 module.exports = async function (context, req) {
     const sourceName = req.body && req.body.sourceName;
@@ -35,18 +41,24 @@ module.exports = async function (context, req) {
         return;
     }
 
+    // Build configuration from app settings environment variable
+    const connectionString = process.env.SqlConnectionString || process.env.AzureConnectionString;
+    const config = parseConnectionString(connectionString);
+
     return new Promise((resolve) => {
         const connection = new Connection(config);
 
         connection.on('connect', (err) => {
             if (err) {
-                context.log.error("Database connection failure in AddSource:", err);
-                context.res = { status: 500, body: `Database Connection Error: ${err.message}` };
+                context.log.error("Database connection failure in saveSources:", err);
+                context.res = { 
+                    status: 500, 
+                    body: `Database Connection Error: ${err.message}` 
+                };
                 resolve();
                 return;
             }
 
-            // Insert into your new Sources table structure
             const query = `
                 INSERT INTO [dbo].[Sources] (SourceName) 
                 VALUES (@SourceName);
@@ -54,14 +66,17 @@ module.exports = async function (context, req) {
 
             const request = new Request(query, (requestErr) => {
                 if (requestErr) {
-                    context.log.error("SQL query execution failure in AddSource:", requestErr);
-                    context.res = { status: 500, body: `SQL Execution Error: ${requestErr.message}` };
+                    context.log.error("SQL execution failure in saveSources:", requestErr);
+                    context.res = { 
+                        status: 500, 
+                        body: `SQL Execution Error: ${requestErr.message}` 
+                    };
                     connection.close();
                     resolve();
                 }
             });
 
-            // Bind parameters safely to avoid SQL injection
+            // Bind parameter safely using the imported TYPES
             request.addParameter('SourceName', TYPES.NVarChar, sourceName);
 
             request.on('requestCompleted', () => {
