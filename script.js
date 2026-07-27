@@ -393,44 +393,48 @@ async function loadSources() {
   try {
     const response = await fetch('/api/getSources');
     if (!response.ok) {
-      throw new Error(`Server returned status ${response.status}`);
+      throw new Error(`Server status ${response.status}`);
     }
-    
+
     const sources = await response.json();
 
-    // 1. Populate the "Source" dropdown on the "Add Recruit" form
+    // 1. Populate Dropdown menu
     const sourceSelect = document.getElementById('f-source');
     if (sourceSelect) {
       sourceSelect.innerHTML = '<option value="">— select source —</option>';
       sources.forEach(src => {
-        const option = document.createElement('option');
-        // src can be a string or object depending on your API output
-        const val = typeof src === 'string' ? src : (src.name || src.id);
-        option.value = val;
-        option.textContent = val;
-        sourceSelect.appendChild(option);
+        // Fallback checks to extract the display string safely
+        const name = typeof src === 'string' ? src : (src.name || src.SourceName || src.id);
+        if (name) {
+          const option = document.createElement('option');
+          option.value = name;
+          option.textContent = name;
+          sourceSelect.appendChild(option);
+        }
       });
     }
 
-    // 2. Populate the Manage Sources list table in Admin page
+    // 2. Populate Admin "Manage Sources" List
     const sourcesList = document.getElementById('sources-list');
     if (sourcesList) {
       sourcesList.innerHTML = '';
       sources.forEach(src => {
-        const name = typeof src === 'string' ? src : (src.name || src.id);
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${name}</td>
-          <td><span class="badge active" style="color:green">Active</span></td>
-        `;
-        sourcesList.appendChild(tr);
+        const name = typeof src === 'string' ? src : (src.name || src.SourceName || src.id);
+        if (name) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${name}</td>
+            <td><span class="badge active" style="color:green">Active</span></td>
+          `;
+          sourcesList.appendChild(tr);
+        }
       });
     }
 
   } catch (err) {
     console.error('Error loading sources:', err);
   }
-};
+}
 
 async function loadPositions() {
   const jobSelect = document.getElementById('f-job');

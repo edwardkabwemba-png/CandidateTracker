@@ -56,7 +56,7 @@ module.exports = async function (context, req) {
         return;
       }
 
-      // Query sources table (Adjust column/table names if your schema uses different names)
+      // Query database sources
       const query = `SELECT SourceID, SourceName FROM [dbo].[Sources] ORDER BY SourceName ASC`;
       
       const request = new Request(query, (requestErr) => {
@@ -78,12 +78,22 @@ module.exports = async function (context, req) {
         resolve();
       });
 
+      // Map SQL columns directly to 'id' and 'name' properties
       request.on('row', (columns) => {
-        const row = {};
+        let id = null;
+        let name = null;
+
         columns.forEach((col) => {
-          row[col.metadata.colName] = col.value;
+          if (col.metadata.colName === 'SourceID') id = col.value;
+          if (col.metadata.colName === 'SourceName') name = col.value;
         });
-        sources.push(row);
+
+        if (name) {
+          sources.push({
+            id: id || name,
+            name: name
+          });
+        }
       });
 
       connection.execSql(request);
