@@ -1,192 +1,72 @@
-const { Connection, Request, TYPES } = require('tedious');
+const { Connection, Request } = require('tedious');
 
-
-
-// Helper to parse ADO.NET connection string into Tedious config
-
-function parseConnectionString(connectionString) {
-
-    const config = { options: { encrypt: true, trustServerCertificate: false, connectTimeout: 15000 } };
-
-    if (!connectionString) return config;
-
-
-
-    const parts = connectionString.split(';').reduce((acc, current) => {
-
-        const [key, ...value] = current.split('=');
-
-        if (key && value.length) {
-
-            acc[key.trim().toLowerCase()] = value.join('=').trim();
-
-        }
-
-        return acc;
-
-    }, {});
-
-
-
-    const rawServer = parts['server'] || parts['data source'] || '';
-
-    config.server = rawServer.replace(/^tcp:/i, '').split(',')[0];
-
-
-
-    config.authentication = {
-
-        type: 'default',
-
-        options: {
-
-            userName: parts['user id'] || parts['uid'] || '',
-
-            password: parts['password'] || parts['pwd'] || ''
-
-        }
-
-    };
-
-
-
-    config.options.database = parts['initial catalog'] || parts['database'] || '';
-
-    return config;
-
-}
-
-
+const config = {
+    server: process.env.DB_SERVER,
+    authentication: { 
+        type: 'default', 
+        options: { 
+            userName: process.env.DB_USER, 
+            password: process.env.DB_PASSWORD 
+        } 
+    },
+    options: { 
+        database: process.env.DB_NAME, 
+        encrypt: true, 
+        trustServerCertificate: false 
+    }
+};
 
 module.exports = async function (context, req) {
-
-    const connectionString = process.env.SqlConnectionString;
-
-
-
-    // Guard check for connection string environment variable
-
-    if (!connectionString) {
-
-        context.log("Missing SqlConnectionString environment variable!");
-
-        context.res = {
-
-            status: 500,
-
-            headers: { 'Content-Type': 'application/json' },
-
-            body: JSON.stringify({ error: "Server configuration missing database connection string." })
-
-        };
-
-        return;
-
-    }
-
-
-
-    // Parse req.body if Azure passes it as a stringified text payload
-
-    let body = req.body;
-
-    if (typeof body === 'string') {
-
-        try {
-
-            body = JSON.parse(body);
-
-        } catch (e) {
-
-            context.res = { status: 400, body: "Malformed JSON payload." };
-
-            return;
-
-        }
-
-    }
-
-
-
-    if (!body || !body.title) {
-
-        context.res = { status: 400, body: "Source title parameter is required." };
-
-        return;
-
-    }
-
-
-
-    const config = parseConnectionString(connectionString);
-
-
-
     return new Promise((resolve) => {
-
         const connection = new Connection(config);
 
-
-
         connection.on('connect', (err) => {
-
             if (err) {
-
-                context.res = { status: 500, body: `DB Connection Error: ${err.message}` };
-
+                context.log.error("Database connection failure in GetSources:", err);
+                context.res = { status: 500, body: `Database connection error: ${err.message}` };
                 resolve();
-
                 return;
-
             }
 
-
-
-            const query = `INSERT INTO [dbo].[Sources] (SourceName, CreatedAt) VALUES (@Title, GETDATE())`;
-
-           
+            // Pull unique non-null sources directly from candidates_data
+            const query = `
+                SELECT DISTINCT Source 
+                FROM [dbo].[candidates_data] 
+                WHERE Source IS NOT NULL AND Source <> '' 
+                ORDER BY Source ASC
+            `;
 
             const request = new Request(query, (requestErr) => {
-
                 if (requestErr) {
-
-                    context.log("SQL Write error in saveSources:", requestErr);
-
-                    context.res = { status: 500, body: `SQL Error: ${requestErr.message}` };
-
-                } else {
-
-                    context.res = {
-
-                        status: 200,
-
-                        headers: { 'Content-Type': 'application/json' },
-
-                        body: { success: true }
-
-                    };
-
+                    context.log.error("SQL query execution failure in GetSources:", requestErr);
+                    context.res = { status: 500, body: `SQL Query Failure: ${requestErr.message}` };
+                    connection.close();
+                    resolve();
                 }
-
-                connection.close();
-
-                resolve();
-
             });
 
+            let sourcesList = [];
 
+            request.on('row', (columns) => {
+                const sourceVal = columns[0].value;
+                if (sourceVal) {
+                    sourcesList.push({ id: sourceVal, name: sourceVal });
+                }
+            });
 
-            request.addParameter('Title', TYPES.NVarChar, body.title);
+            request.on('requestCompleted', () => {
+                connection.close();
+                context.res = {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: sourcesList
+                };
+                resolve();
+            });
 
             connection.execSql(request);
-
         });
 
-
-
         connection.connect();
-
     });
-
-}; 
-
+};
