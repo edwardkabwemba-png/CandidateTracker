@@ -1,7 +1,7 @@
 const { Connection, Request, TYPES } = require('tedious');
 const { BlobServiceClient } = require('@azure/storage-blob');
 
-// Helper to parse ADO.NET connection strings into Tedious config
+// Helper to parse Azure SQL connection string into Tedious configuration
 function parseConnectionString(connectionString) {
     const config = { options: { encrypt: true, trustServerCertificate: false, connectTimeout: 15000 } };
     if (!connectionString) return config;
@@ -29,7 +29,7 @@ function parseConnectionString(connectionString) {
     return config;
 }
 
-// Helper to safely parse YYYYMMDD, YYYY-MM-DD, or ISO strings into a valid Date object
+// Helper to safely parse YYYYMMDD, YYYY-MM-DD, or ISO date strings
 function parseDateInput(rawDate) {
     if (!rawDate) return new Date();
     const str = String(rawDate).trim();
@@ -47,7 +47,7 @@ function parseDateInput(rawDate) {
 
 module.exports = async function (context, req) {
     try {
-        // 1. Fail immediately if required data fields are missing
+        // 1. Fail early if mandatory payload fields are missing
         if (!req.body || !req.body.name || !req.body.surname || !req.body.email) {
             context.res = {
                 status: 400,
@@ -56,7 +56,7 @@ module.exports = async function (context, req) {
             return;
         }
 
-        // 2. Unpack keys from frontend request
+        // 2. Unpack parameters from request body
         const {
             date,
             recruiter,
@@ -82,60 +82,65 @@ module.exports = async function (context, req) {
 
         let uploadedUrls = [];
 
-        // 3. --- AZURE BLOB STORAGE UPLOAD INTEGRATION ---
+        // 3. --- AZURE BLOB STORAGE FILE UPLOAD LOGIC ---
         if (files && Array.isArray(files) && files.length > 0) {
             try {
-                const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
-                if (!connectionString) {
-                    context.res = { status: 500, body: "Error: Missing AZURE_STORAGE_CONNECTION_STRING setting." };
-                    return;
-                }
+                const blobConnStr = process.env.AZURE_STORAGE_CONNECTION_STRING;
+                if (!blobConnStr) {
+                    context.log("Warning: AZURE_STORAGE_CONNECTION_STRING setting is missing in App Settings.");
+                } else {
+                    const blobServiceClient = BlobServiceClient.fromConnectionString(blobConnStr);
+                    const containerClient = blobServiceClient.getContainerClient('cv-uploads');
+                    
+                    // Ensure container exists
+                    await containerClient.createIfNotExists();
 
-                const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
-                const containerClient = blobServiceClient.getContainerClient('cv-uploads');
-                await containerClient.createIfNotExists();
+                    // Sanitize folder name based on candidate name
+                    const folderName = `${name.trim()}_${surname.trim()}`.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-                const folderName = `${name.trim()}_${surname.trim()}`;
-
-                for (const file of files) {
-                    if (file.base64) {
-                        const cleanBase64 = file.base64.includes(',') ? file.base64.split(',')[1] : file.base64;
-                        const fileBuffer = Buffer.from(cleanBase64, 'base64');
-                        
-                        const uniqueFileName = `${folderName}/${Date.now()}-${file.fileName}`;
-                        const blockBlobClient = containerClient.getBlockBlobClient(uniqueFileName);
-                        
-                        await blockBlobClient.upload(fileBuffer, fileBuffer.length);
-                        uploadedUrls.push(blockBlobClient.url);
+                    for (const file of files) {
+                        if (file && file.base64 && file.fileName) {
+                            // Strip Base64 Data URI header if present (e.g., "data:application/pdf;base64,")
+                            const cleanBase64 = file.base64.includes(',') 
+                                ? file.base64.split(',')[1] 
+                                : file.base64;
+                                
+                            const fileBuffer = Buffer.from(cleanBase64, 'base64');
+                            const uniqueFileName = `${folderName}/${Date.now()}-${file.fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+                            
+                            const blockBlobClient = containerClient.getBlockBlobClient(uniqueFileName);
+                            
+                            await blockBlobClient.upload(fileBuffer, fileBuffer.length);
+                            uploadedUrls.push(blockBlobClient.url);
+                        }
                     }
                 }
             } catch (storageErr) {
-                context.log("Blob Storage upload fatal error:", storageErr.message);
-                context.res = { status: 500, body: `Blob Storage Error: ${storageErr.message}` };
-                return;
+                context.log("Blob Storage Upload Exception:", storageErr.message);
+                // Non-fatal catch: allows SQL row creation to complete even if Blob upload encounters issues
             }
         }
 
-        // Set fallback string if no files were uploaded
+        // Final URL string stored in the database
         const finalUrlString = uploadedUrls.length > 0 
             ? uploadedUrls.join(', ') 
             : 'No Supporting documents';
 
         // 4. --- SQL SERVER DATABASE TRANSACTION ---
-        const connectionString = process.env.SqlConnectionString;
-        if (!connectionString) {
+        const sqlConnStr = process.env.SqlConnectionString;
+        if (!sqlConnStr) {
             context.res = { status: 500, body: "Error: Missing SqlConnectionString environment variable." };
             return;
         }
 
-        const dbConfig = parseConnectionString(connectionString);
+        const dbConfig = parseConnectionString(sqlConnStr);
 
         return new Promise((resolve) => {
             const connection = new Connection(dbConfig);
 
             connection.on('connect', (err) => {
                 if (err) {
-                    context.log("Database connection failure in saveRecruit:", err);
+                    context.log("Database connection failure:", err);
                     context.res = { status: 500, body: `Database Connection Error: ${err.message}` };
                     resolve();
                     return;
@@ -159,52 +164,55 @@ module.exports = async function (context, req) {
 
                 const request = new Request(query, (requestErr) => {
                     if (requestErr) {
-                        context.log("SQL execution failure in saveRecruit:", requestErr);
+                        context.log("SQL execution error:", requestErr);
                         context.res = {
                             status: 500,
                             body: `SQL Write Failure: ${requestErr.message}`
                         };
                     } else {
-                        context.log("Database row successfully written.");
+                        context.log("Database write completed successfully.");
                         context.res = {
                             status: 200,
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ success: true, message: "Recruit safely committed to database." })
+                            body: JSON.stringify({ 
+                                success: true, 
+                                message: "Recruit saved successfully.",
+                                cvUrl: finalUrlString 
+                            })
                         };
                     }
                     connection.close();
                     resolve();
                 });
 
-                // Parameter binding matching database types safely
+                // Helper for safe float parsing
+                const parseNum = (val) => (val !== null && val !== undefined && val !== '') ? parseFloat(val) : null;
+
+                // Parameter bindings
                 request.addParameter('Date', TYPES.Date, parseDateInput(date));
                 request.addParameter('Recruiter', TYPES.NVarChar, recruiter || null);
-                request.addParameter('Name', TYPES.NVarChar, name);
-                request.addParameter('Surname', TYPES.NVarChar, surname);
+                request.addParameter('Name', TYPES.NVarChar, name.trim());
+                request.addParameter('Surname', TYPES.NVarChar, surname.trim());
                 request.addParameter('Role', TYPES.NVarChar, role || null);
                 request.addParameter('MainCountryCode', TYPES.NVarChar, mainCountryCode || null);
                 request.addParameter('MainBaseNumber', TYPES.NVarChar, mainBaseNumber || null);
                 request.addParameter('AlternateCountryCode', TYPES.NVarChar, alternateCountryCode || null);
                 request.addParameter('AlternateBaseNumber', TYPES.NVarChar, alternateBaseNumber || null);
-                request.addParameter('Email', TYPES.NVarChar, email);
+                request.addParameter('Email', TYPES.NVarChar, email.trim());
                 request.addParameter('NoticePeriod', TYPES.NVarChar, noticePeriod || null);
                 request.addParameter('CurrentLocation', TYPES.NVarChar, currentLocation || null);
                 request.addParameter('Nationality', TYPES.NVarChar, nationality || null);
 
-                // Helper to parse floats safely
-                const parseNum = (val) => (val !== null && val !== undefined && val !== '') ? parseFloat(val) : null;
-                
+                // Numeric bindings with precisions
                 request.addParameter('CurrentRate', TYPES.Decimal, parseNum(currentRate), { precision: 18, scale: 2 });
                 request.addParameter('ExpectedRate', TYPES.Decimal, parseNum(expectedRate), { precision: 18, scale: 2 });
                 request.addParameter('Source', TYPES.NVarChar, source || null);
-                
-                // Safe numeric bindings for Years of Experience
                 request.addParameter('YearsOfExperience', TYPES.Decimal, parseNum(yearsOfExperience), { precision: 5, scale: 1 });
-                
-                // Outcome, Comments, and CV URL strings
+
+                // String and document bindings
                 request.addParameter('Outcome', TYPES.NVarChar, outcome || null);
                 request.addParameter('Comments', TYPES.NVarChar, comments || null);
-                request.addParameter('cvUrl', TYPES.NVarChar, finalUrlString); 
+                request.addParameter('cvUrl', TYPES.NVarChar, finalUrlString);
 
                 connection.execSql(request);
             });

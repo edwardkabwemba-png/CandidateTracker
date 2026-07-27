@@ -730,6 +730,61 @@ async function submitForm(event) {
         return;
     }
 
+    // Helper to convert uploaded file to Base64
+function convertFileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (error) => reject(error);
+    });
+}
+
+// Targeted File Processing Block inside submitForm
+async function getUploadedFiles() {
+    // Queries common file input IDs or falls back to any file input on the page
+    const fileInput = document.getElementById('f-cv') || 
+                      document.getElementById('f-file') || 
+                      document.getElementById('f-files') || 
+                      document.getElementById('supporting-files') ||
+                      document.querySelector('input[type="file"]');
+                      
+    let filesArray = [];
+
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        for (const file of fileInput.files) {
+            try {
+                const base64Data = await convertFileToBase64(file);
+                filesArray.push({
+                    fileName: file.name,
+                    base64: base64Data
+                });
+            } catch (err) {
+                console.error("Error reading file:", file.name, err);
+            }
+        }
+    }
+    return filesArray;
+}
+
+// Inside your main submitForm function:
+async function submitForm(event) {
+    if (event) event.preventDefault();
+
+    // Capture files array
+    const filesArray = await getUploadedFiles();
+
+    const candidateData = {
+        // ... your other form fields ...
+        currentRate: getVal('f-crate') || getVal('f-current-rate'),
+        expectedRate: getVal('f-erate') || getVal('f-expected-rate'),
+        files: filesArray // Pass the populated files array
+    };
+
+    console.log("Payload sending with files:", candidateData);
+
+    // Fetch call to /api/saveRecruit ...
+}
     // 4. Send API Request
     try {
         const response = await fetch('/api/saveRecruit', {
