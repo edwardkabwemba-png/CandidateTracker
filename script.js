@@ -391,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Function to fetch sources from backend and populate dropdowns & admin list
 async function loadSources() {
   try {
-    const response = await fetch('http://localhost:7071/api/getSources');
+    const response = await fetch('/api/getSources');
     if (!response.ok) {
       throw new Error(`Server returned status ${response.status}`);
     }
