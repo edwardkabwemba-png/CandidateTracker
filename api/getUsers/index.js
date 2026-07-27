@@ -1,35 +1,4 @@
-const ALLOWED_ADMINS = [
-    'edward.kabwemba@frostbytedigital.co.za',
-    'admin@yourcompany.com'
-];
 
-function checkBackendAuthorization(req, context) {
-    // Read raw email from headers or body
-    const rawEmail = req.headers['x-ms-client-principal-name'] || 
-                     req.headers['x-user-email'] || 
-                     req.body?.currentUserEmail || 
-                     '';
-
-    // Normalize input: trim, lowercase, strip whitespace
-    const cleanEmail = String(rawEmail)
-        .trim()
-        .toLowerCase()
-        .replace(/[\r\n\t]/g, '');
-
-    const normalizedAdmins = ALLOWED_ADMINS.map(e => e.trim().toLowerCase());
-
-    return normalizedAdmins.includes(cleanEmail);
-}
-
-// Top of your function handler:
-module.exports = async function (context, req) {
-    if (!checkBackendAuthorization(req, context)) {
-        context.res = {
-            status: 403,
-            body: "Forbidden: You are not authorized to manage users."
-        };
-        return;
-    }
 
 
     // ... rest of your user administration code ...
@@ -133,5 +102,4 @@ module.exports = async function (context, req) {
 
         connection.connect();
     });
-};
 };
