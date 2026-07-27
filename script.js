@@ -284,22 +284,35 @@ async function loadPositions() {
 
 
 async function addItem(type) {
-  const inputId = type === 'job' ? 'new-job' : 'new-source';
-  const val = document.getElementById(inputId).value.trim();
-  if(!val) return;
-  const endpoint = type === 'job' ? '/api/savePositions' : '/api/saveSources';
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: val })
-    });
-    if (!response.ok) throw new Error('Database layout update issue.');
-    document.getElementById(inputId).value = '';
-    if (type === 'job') loadPositions(); else loadSources();
-    if (typeof populateFormDropdowns === 'function') populateFormDropdowns();
-  } catch (error) {
-    alert('Error adding item: ' + error.message);
+  if (type === 'source') {
+    const input = document.getElementById('new-source');
+    const sourceName = input ? input.value.trim() : '';
+
+    if (!sourceName) {
+      alert('Please enter a source name.');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/saveSources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceName: sourceName })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || `Server returned ${response.status}`);
+      }
+
+      // Clear input and reload the updated source list
+      input.value = '';
+      await loadSources(); 
+
+    } catch (err) {
+      console.error('Error adding source:', err);
+      alert(`Failed to add source: ${err.message}`);
+    }
   }
 }
 
