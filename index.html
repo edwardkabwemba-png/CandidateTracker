@@ -280,12 +280,14 @@
       </div>
     </div>
 
-    <div class="content" id="page-sources" style="display:none">
-      <div class="section-head">Manage Sources</div>
-      <div style="display:flex;gap:8px;margin-bottom:16px">
-        <input type="text" id="new-source" placeholder="New source e.g. Headhunter" style="flex:1;font-size:13px" />
-        <button class="add-btn" onclick="addItem('source')"><i class="ti ti-plus" aria-hidden="true"></i> Add</button>
-      </div>
+<div class="content" id="page-sources" style="display:none">
+  <div class="section-head">Manage Sources</div>
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+    <input type="text" id="new-source" placeholder="New source e.g. Headhunter" style="flex:1;font-size:13px" />
+    <button type="button" class="add-btn" onclick="addItem('source')">
+      <i class="ti ti-plus" aria-hidden="true"></i> Add
+    </button>
+  </div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Source Name</th><th style="width:80px">Status</th></tr></thead>
