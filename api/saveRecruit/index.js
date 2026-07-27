@@ -1,7 +1,7 @@
 const { Connection, Request, TYPES } = require('tedious');
 const { BlobServiceClient } = require('@azure/storage-blob');
 
-// Parse Azure SQL connection string
+// Helper to parse ADO.NET connection strings into Tedious config
 function parseConnectionString(connectionString) {
     const config = { options: { encrypt: true, trustServerCertificate: false, connectTimeout: 15000 } };
     if (!connectionString) return config;
@@ -75,7 +75,7 @@ module.exports = async function (context, req) {
             expectedRate,
             source,
             yearsOfExperience,
-            outcome, // <-- ADDED OUTCOME FROM FRONTEND
+            outcome,
             comments,
             files
         } = req.body;
@@ -116,10 +116,10 @@ module.exports = async function (context, req) {
             }
         }
 
-        // Set fallback text if no files were uploaded
-const finalUrlString = uploadedUrls.length > 0 
-    ? uploadedUrls.join(', ') 
-    : 'No Supporting documents';
+        // Set fallback string if no files were uploaded
+        const finalUrlString = uploadedUrls.length > 0 
+            ? uploadedUrls.join(', ') 
+            : 'No Supporting documents';
 
         // 4. --- SQL SERVER DATABASE TRANSACTION ---
         const connectionString = process.env.SqlConnectionString;
@@ -141,7 +141,6 @@ const finalUrlString = uploadedUrls.length > 0
                     return;
                 }
 
-                // ADDED [Outcome] COLUMN AND PARAMETER TO INSERT STATEMENT
                 const query = `
                     INSERT INTO [dbo].[Candidates_data] (
                         [Date], [Recruiter], [Name], [Surname], [Role], 
@@ -170,7 +169,7 @@ const finalUrlString = uploadedUrls.length > 0
                         context.res = {
                             status: 200,
                             headers: { 'Content-Type': 'application/json' },
-                            body: { success: true, message: "Recruit safely committed to database." }
+                            body: JSON.stringify({ success: true, message: "Recruit safely committed to database." })
                         };
                     }
                     connection.close();
@@ -192,15 +191,17 @@ const finalUrlString = uploadedUrls.length > 0
                 request.addParameter('CurrentLocation', TYPES.NVarChar, currentLocation || null);
                 request.addParameter('Nationality', TYPES.NVarChar, nationality || null);
 
-                // Safe Decimal conversions with precision options
+                // Helper to parse floats safely
                 const parseNum = (val) => (val !== null && val !== undefined && val !== '') ? parseFloat(val) : null;
                 
                 request.addParameter('CurrentRate', TYPES.Decimal, parseNum(currentRate), { precision: 18, scale: 2 });
                 request.addParameter('ExpectedRate', TYPES.Decimal, parseNum(expectedRate), { precision: 18, scale: 2 });
                 request.addParameter('Source', TYPES.NVarChar, source || null);
+                
+                // Safe numeric bindings for Years of Experience
                 request.addParameter('YearsOfExperience', TYPES.Decimal, parseNum(yearsOfExperience), { precision: 5, scale: 1 });
                 
-                // Bind Outcome & Comments
+                // Outcome, Comments, and CV URL strings
                 request.addParameter('Outcome', TYPES.NVarChar, outcome || null);
                 request.addParameter('Comments', TYPES.NVarChar, comments || null);
                 request.addParameter('cvUrl', TYPES.NVarChar, finalUrlString); 

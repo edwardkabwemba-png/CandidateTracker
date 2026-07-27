@@ -621,6 +621,15 @@ const getSelectedText = (id) => {
     return el.options[el.selectedIndex].text.trim();
 };
 
+function convertFileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
+  });
+}
+
 async function submitForm(event) {
     if (event) event.preventDefault();
     console.log("Submitting form to /api/saveRecruit...");
@@ -631,13 +640,13 @@ async function submitForm(event) {
     if (fSuccess) fSuccess.style.display = 'none';
     if (fErr) fErr.style.display = 'none';
 
-    // Helper to safely extract input values for standard text inputs
+    // Helper to safely extract input values for standard text/number inputs
     const getVal = (id) => {
         const el = document.getElementById(id);
         return el ? el.value.trim() : '';
     };
 
-    // Helper to safely get the selected text from a <select> dropdown instead of its value
+    // Helper to safely get selected text from <select> dropdowns instead of raw values
     const getText = (id) => {
         const el = document.getElementById(id);
         if (!el) return '';
@@ -650,8 +659,22 @@ async function submitForm(event) {
         return el.value ? el.value.trim() : '';
     };
 
-    // 1. Convert uploaded files to base64 array matching the backend expectation
-    const fileInput = document.getElementById('supporting-files') || document.getElementById('f-files');
+    // Helper to show inline form error
+    const showFormError = (msg) => {
+        console.error("Form Validation/Save Error:", msg);
+        if (fErr) {
+            fErr.textContent = msg;
+            fErr.style.display = 'block';
+        } else {
+            alert(`Error: ${msg}`);
+        }
+    };
+
+    // 1. Convert uploaded CV / supporting files to Base64 array
+    const fileInput = document.getElementById('f-cv') || 
+                      document.getElementById('supporting-files') || 
+                      document.getElementById('f-files');
+                      
     let filesArray = [];
 
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
@@ -668,18 +691,18 @@ async function submitForm(event) {
         }
     }
 
-    // 2. Map payload keys to match backend expected parameters
+    // 2. Map payload keys to match backend expectations
     const candidateData = {
         date: getVal('f-date') || getVal('sourced-date') || getVal('date-sourced'),
         
-        // ALL DROPDOWNS NOW USE getText():
+        // DROPDOWNS (Uses getText):
         recruiter: getText('f-recruiter') || getText('recruiter') || getText('candidate-recruiter'),
         role: getText('f-job') || getText('recruit-position') || getText('candidate-position'),
         noticePeriod: getText('f-notice') || getText('notice-period'),
         outcome: getText('outcome') || getText('candidate-outcome') || getText('recruit-outcome'),
         source: getText('f-source') || getText('source') || getText('candidate-source'),
         
-        // REGULAR INPUTS USE getVal():
+        // REGULAR INPUTS (Uses getVal):
         name: getVal('f-fname') || getVal('first-name'),
         surname: getVal('f-lname') || getVal('surname'),
         mainCountryCode: getVal('f-main-code') || getVal('phone-country') || '+27',
@@ -691,19 +714,23 @@ async function submitForm(event) {
         nationality: getVal('f-nationality') || getVal('nationality'),
         currentRate: getVal('f-crate') || getVal('f-current-rate'),
         expectedRate: getVal('f-erate') || getVal('f-expected-rate'),
-        yearsOfExperience: getVal('f-yoe') || getVal('years-experience'),
+        
+        // YEARS OF EXPERIENCE (Comprehensive Fallbacks):
+        yearsOfExperience: getVal('f-yoe') || getVal('years-experience') || getVal('f-experience') || getVal('experience') || getVal('yoe'),
+        
         comments: getVal('f-comments') || getVal('comments'),
         files: filesArray
     };
 
     console.log("Payload sending to /api/saveRecruit:", candidateData);
 
-    // Validation checks required by backend
+    // 3. Client-side Validation Required by Backend
     if (!candidateData.name || !candidateData.surname || !candidateData.email) {
         showFormError("Missing required profile fields (First Name, Surname, or Email).");
         return;
     }
 
+    // 4. Send API Request
     try {
         const response = await fetch('/api/saveRecruit', {
             method: 'POST',
@@ -724,7 +751,7 @@ async function submitForm(event) {
             fSuccess.style.display = 'block';
         }
 
-        // Reset the form after save
+        // Reset the form input elements
         if (typeof clearForm === 'function') {
             clearForm();
         } else {
@@ -732,7 +759,7 @@ async function submitForm(event) {
             if (form) form.reset();
         }
 
-        // Refresh main table
+        // Refresh main table if present on page
         if (typeof renderTable === 'function') {
             await renderTable();
         }
