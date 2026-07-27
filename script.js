@@ -1,6 +1,43 @@
 // --- GLOBAL DECLARED CORE STATE CACHE ---
 let allRecruitsData = [];
 
+// List of authorized admin emails
+const ALLOWED_ADMINS = [
+    'edward.kabwemba@frostbytedigital.co.za',
+    'admin@yourcompany.com'
+];
+
+function applyRoleBasedAccessControl(currentUserEmail) {
+    const isAllowed = ALLOWED_ADMINS.includes(currentUserEmail.toLowerCase());
+    
+    // Select your Manage Users tab/button (update the ID to match your HTML)
+    const manageUsersNav = document.getElementById('nav-manage-users') || 
+                           document.getElementById('manage-users-tab') ||
+                           document.querySelector('[data-tab="manage-users"]');
+
+    if (manageUsersNav) {
+        if (!isAllowed) {
+            // Option A: Hide completely
+            manageUsersNav.style.display = 'none';
+
+            // Option B (Alternative): Keep visible but disable clicks
+            // manageUsersNav.classList.add('disabled');
+            // manageUsersNav.style.pointerEvents = 'none';
+            // manageUsersNav.style.opacity = '0.5';
+        } else {
+            manageUsersNav.style.display = 'block';
+        }
+    }
+}
+
+// Call this function when the page loads or after the user logs in
+document.addEventListener('DOMContentLoaded', () => {
+    // Replace this with how you store/get the logged-in user's email in your app
+    const loggedInEmail = localStorage.getItem('userEmail') || 'user@yourcompany.com'; 
+    
+    applyRoleBasedAccessControl(loggedInEmail);
+});
+
 // ------------------- UNIFIED MAIN ROUTER FUNCTION -------------------
 function showPage(page) {
   // 1. Hide all page sections

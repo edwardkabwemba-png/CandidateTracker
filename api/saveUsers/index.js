@@ -1,3 +1,39 @@
+// Helper to check if the current requester is an authorized admin
+const ALLOWED_ADMINS = [
+    'edward.kabwemba@frostbytedigital.co.za', 
+    'admin@yourcompany.com'
+];
+
+function isUserAuthorized(req) {
+    // 1. Check App Service / Entra ID header (if authentication is enabled on Azure)
+    const headerUser = req.headers['x-ms-client-principal-name'];
+    if (headerUser && ALLOWED_ADMINS.includes(headerUser.toLowerCase())) {
+        return true;
+    }
+
+    // 2. Check email passed in request body or headers
+    const reqUser = req.body?.currentUserEmail || req.headers['x-user-email'];
+    if (reqUser && ALLOWED_ADMINS.includes(String(reqUser).toLowerCase())) {
+        return true;
+    }
+
+    return false;
+}
+
+// Add this block at the very top of your User Admin functions:
+module.exports = async function (context, req) {
+    if (!isUserAuthorized(req)) {
+        context.res = {
+            status: 403,
+            body: "Access Denied: You do not have permission to manage users."
+        };
+        return;
+    }
+
+    // ... rest of your user administration code ...
+};
+
+
 const { Connection, Request, TYPES } = require('tedious');
 const crypto = require('crypto'); // Built-in Node.js module
 
