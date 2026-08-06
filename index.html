@@ -116,10 +116,13 @@
       <div class="form-grid">
         
         <div class="form-group">
-          <label>Recruiter <span class="req">*</span></label>
-          <select id="f-recruiter"><option value="">— select recruiter —</option></select>
-          <span class="field-err" id="e-recruiter"></span>
-        </div>
+  <label for="f-recruiter">Recruiter <span class="required">*</span></label>
+  <select id="f-recruiter" name="recruiter" required>
+    <option value="">— select recruiter —</option>
+    <!-- Your dynamic or static recruiter options here -->
+  </select>
+  <span class="field-err" id="e-recruiter"></span>
+</div>
         
         <div class="form-group">
           <label>Date Sourced <span class="req">*</span></label>
