@@ -890,3 +890,24 @@ function showFormError(msg) {
         alert(msg);
     }
 }
+
+function syncPhoneCode() {
+    const countrySelect = document.getElementById('f-country');
+    const selectedOption = countrySelect.options[countrySelect.selectedIndex];
+    
+    // Extract the data-code attribute value (e.g., +27, +263)
+    const code = selectedOption.getAttribute('data-code') || '';
+    
+    // Auto-populate the primary phone code field
+    const phoneCodeInput = document.getElementById('f-phonecode');
+    if (phoneCodeInput) {
+        phoneCodeInput.value = code;
+    }
+
+    // Auto-populate the alternate phone code field if empty or default
+    const altPhoneCodeInput = document.getElementById('f-alt-phonecode');
+    if (altPhoneCodeInput && (!altPhoneCodeInput.value || altPhoneCodeInput.dataset.autoSynced === "true")) {
+        altPhoneCodeInput.value = code;
+        altPhoneCodeInput.dataset.autoSynced = "true";
+    }
+}
